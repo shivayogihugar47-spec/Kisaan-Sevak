@@ -12,17 +12,21 @@
   }
 
   html {
-    font-family: "Noto Sans", "Manrope", sans-serif;
-    background: #FAF7F2;
+    font-family: "Manrope", sans-serif;
+    background: #FDFCFB;
     color: var(--ink-main);
   }
 
   body {
     min-height: 100vh;
-    background-color: #FAF7F2;
-    color: #064e3b;
+    background-color: #FDFCFB;
+    color: #032115;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  .font-display {
+    font-family: "Sora", "Manrope", sans-serif;
   }
 
   button,

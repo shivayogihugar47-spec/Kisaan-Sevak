@@ -5,13 +5,14 @@ import {
   Droplets,
   CloudRain,
   Sun,
-  ArrowRight,
   Store,
   FileText,
   Users,
   Recycle,
   Stethoscope,
-  TrendingUp,
+  Volume2,
+  ChevronRight,
+  Zap,
 } from "lucide-react";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import { useLanguage } from "../context/LanguageContext";
@@ -25,9 +26,13 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchNews = async () => {
       setLoading(true);
-      const articles = await getAgricultureNews("agriculture India", 1);
-      if (articles && articles.length > 0) {
-        setNews(articles[0]);
+      try {
+        const articles = await getAgricultureNews("agriculture India", 1);
+        if (articles && articles.length > 0) {
+          setNews(articles[0]);
+        }
+      } catch (e) {
+        console.error(e);
       }
       setLoading(false);
     };
@@ -35,125 +40,136 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#FAF7F2] px-4 py-6 md:px-8">
-      {/* --- GREETING SECTION --- */}
-      <div className="section-fade mb-6">
-        <h2 className="text-2xl font-black text-[#064E3B] leading-tight">
-          Namaste, Ramesh Ji!
-        </h2>
-        <p className="text-[13px] font-medium text-slate-500 mt-1">
-          {new Date().toLocaleDateString(content.locale, { 
-            weekday: 'long', 
-            day: 'numeric',
-            month: 'short'
-          })} • {new Date().toLocaleTimeString(content.locale, {
-            hour: '2-digit',
-            minute: '2-digit'
-          })}
-        </p>
-      </div>
+    <main className="min-h-screen bg-[#FAF7F2] font-sans text-[#032115]">
+      {/* --- TOP NAV --- */}
+      <nav className="px-6 py-5 flex items-center justify-between section-fade">
+        <div className="flex items-center gap-2">
+           <div className="h-8 w-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-md">
+              <Zap size={18} fill="currentColor" />
+           </div>
+           <span className="text-xl font-black tracking-tight">Kisaan Sevak</span>
+        </div>
+        <LanguageSwitcher />
+      </nav>
 
-      <div className="max-w-2xl mx-auto space-y-5">
+      <div className="px-6 max-w-2xl mx-auto space-y-8">
         
-        {/* --- WEATHER HERO CARD --- */}
-        <div className="bg-[#14532D] rounded-[24px] p-6 text-white shadow-lg section-fade-delay relative overflow-hidden">
-          {/* Subtle Sun Icon in Background */}
-          <Sun size={120} className="absolute -right-6 -top-6 text-white/10" strokeWidth={1} />
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-100/80 mb-6">
-              <MapPin size={14} className="text-emerald-400" />
-              Ludhiana, Punjab
-            </div>
-            
-            <div className="flex justify-between items-end">
-              <div>
-                <h3 className="text-[64px] font-bold leading-none tracking-tighter">
-                  28°C
-                </h3>
-                <p className="text-sm font-medium text-emerald-100/90 mt-2">
-                  Clear Skies • High of 32°C
-                </p>
-              </div>
-              
-              <div className="flex gap-3">
-                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl p-3 text-center min-w-[70px]">
-                  <Droplets size={18} className="mx-auto mb-1 text-emerald-300" />
-                  <p className="text-[11px] font-bold">65%</p>
-                  <p className="text-[9px] text-emerald-100/60 uppercase font-black">Hum.</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl p-3 text-center min-w-[70px]">
-                  <CloudRain size={18} className="mx-auto mb-1 text-emerald-300" />
-                  <p className="text-[11px] font-bold">10%</p>
-                  <p className="text-[9px] text-emerald-100/60 uppercase font-black">Rain</p>
-                </div>
-              </div>
-            </div>
+        {/* --- GREETING --- */}
+        <header className="section-fade-delay">
+          <h1 className="text-3xl font-black leading-tight text-slate-900">
+            {content.dashboard.greeting}
+          </h1>
+          <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm mt-1 uppercase tracking-wider">
+             <MapPin size={14} /> Belgaum • {new Date().toLocaleDateString(content.locale, { weekday: 'long' })}
           </div>
+        </header>
+
+        {/* --- AIRY PREMIUM WEATHER HERO --- */}
+        <div className="relative group overflow-hidden h-[300px] md:h-[260px] rounded-[40px] shadow-2xl section-fade-delay border border-white">
+           {/* Dynamic Background Image */}
+           <img 
+             src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2064&auto=format&fit=crop" 
+             className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+             alt="Field"
+           />
+           {/* Elegant Overlay */}
+           <div className="absolute inset-0 bg-gradient-to-tr from-emerald-950/80 via-emerald-900/40 to-transparent p-8 md:p-10 flex flex-col justify-between">
+              
+              <div className="flex justify-between items-start">
+                 <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 shadow-sm">
+                    <div className="flex items-center gap-2">
+                       <MapPin size={14} className="text-emerald-300" />
+                       <span className="text-xs font-black uppercase tracking-widest text-white">{content.locationLabel}</span>
+                    </div>
+                 </div>
+                 <button className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-emerald-500 transition-colors">
+                    <Volume2 size={22} />
+                 </button>
+              </div>
+
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                 <div>
+                    <h2 className="text-7xl font-black text-white leading-none tracking-tighter">28°</h2>
+                    <p className="text-emerald-100 font-bold text-lg mt-2 flex items-center gap-2">
+                       <Sun size={20} className="text-yellow-400" /> {content.weather.codes.clear} • 32° High
+                    </p>
+                 </div>
+                 
+                 <div className="flex gap-4">
+                    <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-[28px] px-6 py-4 flex items-center gap-3">
+                       <Droplets size={20} className="text-emerald-300" />
+                       <div>
+                          <p className="text-[10px] font-black text-emerald-100/60 uppercase tracking-widest leading-none mb-1">{content.brief.humidity}</p>
+                          <p className="text-xl font-black text-white">65%</p>
+                       </div>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-[28px] px-6 py-4 flex items-center gap-3">
+                       <CloudRain size={20} className="text-emerald-300" />
+                       <div>
+                          <p className="text-[10px] font-black text-emerald-100/60 uppercase tracking-widest leading-none mb-1">{content.weather.codes.rain}</p>
+                          <p className="text-xl font-black text-white">10%</p>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
         </div>
 
-        {/* --- TOP MANDI PRICE HIGHLIGHT --- */}
-        <Link 
-          to="/mandi"
-          className="flex items-center justify-between bg-[#FFEDD5] rounded-2xl p-4 shadow-sm border border-orange-100 no-underline group hover:shadow-md transition-all section-fade-delay"
-        >
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-orange-200/50 rounded-xl flex items-center justify-center text-orange-700">
-               <TrendingUp size={20} strokeWidth={2.5} />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-black tracking-widest text-orange-800/60 leading-none mb-1">Top Mandi Price</p>
-              <h4 className="text-base font-bold text-slate-900 font-display">
-                Wheat ₹2,450/qtl <span className="text-green-600 font-bold ml-1">(↑ ₹50)</span>
-              </h4>
-            </div>
-          </div>
-          <ArrowRight size={18} className="text-orange-400 group-hover:translate-x-1 transition-transform" />
-        </Link>
-
-        {/* --- MODULES LIST --- */}
-        <div className="space-y-3 section-fade-late pt-2">
+        {/* --- VIBRANT BENTO GRID (Solid Soft Colors) --- */}
+        <div className="grid grid-cols-2 gap-4 section-fade-late">
           {[
             {
-              title: "Daily Farm Brief",
-              subtitle: "Your farm's daily summary and task list.",
+              title: content.dashboard.modules[0].title,
+              subtitle: content.dashboard.modules[0].subtitle,
               icon: Sun,
-              color: "bg-[#14532D] text-white",
+              bg: "bg-[#E2F2E9]",
+              text: "text-[#065F46]",
+              iconBg: "bg-white",
               route: "/brief",
             },
             {
-              title: "Mandi Mitra",
-              subtitle: "Live prices from 5 nearest mandis.",
+              title: content.dashboard.modules[1].title,
+              subtitle: content.dashboard.modules[1].subtitle,
               icon: Store,
-              color: "bg-orange-500 text-white",
+              bg: "bg-[#FFF4E6]",
+              text: "text-[#92400E]",
+              iconBg: "bg-white",
               route: "/mandi",
             },
             {
-              title: "Crop Doctor",
-              subtitle: "Check your plants for diseases instantly.",
+              title: content.dashboard.modules[2].title,
+              subtitle: content.dashboard.modules[2].subtitle,
               icon: Stethoscope,
-              color: "bg-red-500 text-white",
+              bg: "bg-[#FEE2E2]",
+              text: "text-[#991B1B]",
+              iconBg: "bg-white",
               route: "/crop-doctor",
             },
             {
-              title: "Sarkar Saathi",
-              subtitle: "Government schemes curated for you.",
+              title: content.dashboard.modules[3].title,
+              subtitle: content.dashboard.modules[3].subtitle,
               icon: FileText,
-              color: "bg-[#7C2D12] text-white",
+              bg: "bg-[#DBEAFE]",
+              text: "text-[#1E40AF]",
+              iconBg: "bg-white",
               route: "/schemes",
             },
             {
-              title: "Waste to Wealth",
-              subtitle: "Sell your crop residue at best prices.",
+              title: content.dashboard.modules[4].title,
+              subtitle: content.dashboard.modules[4].subtitle,
               icon: Recycle,
-              color: "bg-emerald-900 text-white",
+              bg: "bg-[#F0FDF4]",
+              text: "text-[#166534]",
+              iconBg: "bg-white",
               route: "/waste-to-wealth",
             },
             {
-              title: "Kisaan Network",
-              subtitle: "Connect with nearby farmers and experts.",
+              title: content.dashboard.modules[5].title,
+              subtitle: content.dashboard.modules[5].subtitle,
               icon: Users,
-              color: "bg-slate-500 text-white",
+              bg: "bg-[#F1F5F9]",
+              text: "text-[#334155]",
+              iconBg: "bg-white",
               route: "/network",
             },
           ].map((item, i) => {
@@ -162,38 +178,52 @@ export default function Dashboard() {
               <Link
                 key={i}
                 to={item.route}
-                className="flex items-center gap-4 bg-white p-4 rounded-[22px] border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] no-underline group active:scale-[0.98] transition-all"
+                className={`relative ${item.bg} p-6 rounded-[32px] no-underline transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between h-[170px] border border-transparent hover:border-white shadow-sm`}
               >
-                <div className={`h-12 w-12 rounded-2xl ${item.color} flex-shrink-0 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform`}>
-                  <Icon size={22} strokeWidth={2.5} />
+                <div className={`${item.iconBg} h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm`}>
+                  <Icon size={24} className={item.text} strokeWidth={2.5} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[17px] font-bold text-slate-900 leading-tight">{item.title}</h4>
-                  <p className="text-[13px] text-slate-500 mt-1 line-clamp-1">{item.subtitle}</p>
+                
+                <div>
+                   <h4 className={`text-[17px] font-black leading-tight ${item.text}`}>
+                     {item.title}
+                   </h4>
+                   <div className="flex items-center justify-between mt-1">
+                      <p className={`text-[10px] font-bold opacity-60 uppercase tracking-widest`}>
+                        {item.subtitle}
+                      </p>
+                      <ChevronRight size={14} className="opacity-40" />
+                   </div>
                 </div>
               </Link>
             );
           })}
         </div>
 
-        {/* --- FEATURE BANNER --- */}
-        <div className="relative rounded-[24px] overflow-hidden group h-48 section-fade-late shadow-xl shadow-slate-200/50 mt-8 mb-4 cursor-pointer">
-          <img
-            src="https://images.unsplash.com/photo-1589923188900-85dae523342b"
-            className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-105"
-            alt="New Feature"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent p-6 flex flex-col justify-end">
-            <span className="bg-[#FBBF24] text-[#064E3B] text-[10px] px-2.5 py-1 rounded-md font-black tracking-widest uppercase mb-3 w-fit">
-              NEW UPDATE
-            </span>
-            <h3 className="text-white font-bold text-xl leading-tight">
-              Smart Irrigation for Wheat Crops
-            </h3>
-            <p className="text-white/70 text-sm mt-1">
-              Expert guide to save water and increase yield.
-            </p>
-          </div>
+        {/* --- LATEST UPDATES --- */}
+        <div className="section-fade-late pt-4 pb-12">
+           <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black">Latest for Farm</h3>
+              <button className="text-[11px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-50 px-3 py-1.5 rounded-full">Explore all</button>
+           </div>
+
+           <a
+             href={news?.url || "#"}
+             target="_blank"
+             rel="noopener noreferrer"
+             className="flex gap-4 items-center bg-white p-4 rounded-[24px] border border-slate-200/60 shadow-sm group no-underline"
+           >
+              <div className="h-20 w-20 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0">
+                 <img src={news?.urlToImage || "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?q=80&w=2045&auto=format&fit=crop"} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700" alt="news" />
+              </div>
+              <div className="flex-1">
+                 <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">{content.dashboard.newsLabel}</p>
+                 <h4 className="text-sm font-black leading-snug line-clamp-2 text-slate-900 group-hover:text-emerald-700 transition-colors">
+                    {loading ? content.common.loading : news?.title || "Agriculture Update"}
+                 </h4>
+              </div>
+              <ChevronRight size={20} className="text-slate-300 group-hover:text-emerald-600" />
+           </a>
         </div>
       </div>
     </main>
