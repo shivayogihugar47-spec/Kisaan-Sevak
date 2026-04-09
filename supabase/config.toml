@@ -1,0 +1,10 @@
+[functions]
+# We call these functions from the browser before the user is authenticated.
+# Therefore we disable JWT verification for OTP requests.
+
+[functions.send-otp]
+verify_jwt = false
+
+[functions.verify-otp]
+verify_jwt = false
+

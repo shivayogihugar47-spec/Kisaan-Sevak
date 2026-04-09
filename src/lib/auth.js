@@ -2,9 +2,11 @@ export const ROLES = ["farmer", "seller", "buyer"];
 const PROFILE_STORAGE_KEY = "kisaan-sevak-firebase-profiles";
 
 export const ROLE_ROUTES = {
-  farmer: "/farmer-dashboard",
-  seller: "/seller-dashboard",
-  buyer: "/buyer-dashboard",
+  farmer: "/dashboard",
+  seller: "/dashboard",
+  buyer: "/enterprise",
+  enterprise: "/enterprise",
+  admin: "/admin",
 };
 
 export function getUserRole(user) {

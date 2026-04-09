@@ -61,7 +61,7 @@ export default function OnboardingPage() {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-leaf-500">Kisaan Sevak</p>
           <h1 className="mt-2 font-display text-3xl font-extrabold text-leaf-800">Complete your profile</h1>
           <p className="mt-2 text-sm text-leaf-700/80">
-            Your phone number is verified through Firebase. Add your name and choose the role that should open after sign in.
+            Your phone number is verified through SMS OTP. Add your name and choose the role that should open after sign in.
           </p>
         </div>
 

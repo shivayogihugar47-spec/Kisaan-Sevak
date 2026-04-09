@@ -1,8 +1,6 @@
 import {
-  BookOpenText,
   Home,
   MessageCircleMore,
-  ScanSearch,
   Sprout,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -12,9 +10,7 @@ export default function BottomNav() {
   const { content } = useLanguage();
   const navItems = [
     { label: content.nav.home, route: "/", icon: Home },
-    { label: content.nav.brief, route: "/brief", icon: BookOpenText },
     { label: content.nav.mandi, route: "/mandi", icon: Sprout },
-    { label: content.nav.doctor, route: "/crop-doctor", icon: ScanSearch },
     { label: content.nav.chat, route: "/chat", icon: MessageCircleMore },
   ];
 

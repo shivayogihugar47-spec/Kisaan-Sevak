@@ -1,41 +1,54 @@
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { motion } from "framer-motion";
+import { Zap } from "lucide-react";
+import Header from "./Header";
+import PageWrapper from "./PageWrapper"; // Import the wrapper we created earlier
+import LanguageSwitcher from "./LanguageSwitcher"; // Assuming this exists based on your DashboardPage
+import { useLanguage } from "../context/LanguageContext";
 
-export default function DashboardShell({ badge, title, description, children }) {
-  const navigate = useNavigate();
-  const { user, profile } = useAuth();
+// Animation variants for smooth, staggered loading
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
 
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+};
+
+export default function DashboardShell({ badge, title, description, children, showBack = false }) {
+  const { content } = useLanguage();
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-emerald-50/20">
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col p-5 lg:p-8 overflow-x-hidden">
-        {/* Page Header Panel */}
-        <div className="relative overflow-hidden rounded-[32px] bg-white p-8 shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-emerald-100 mb-8 section-fade">
-          {/* Decorative background element */}
-          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-50/50 blur-3xl opacity-60" />
-          
-          <div className="relative z-10">
-            <span className="inline-flex rounded-full bg-emerald-100/50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
-              {badge}
-            </span>
-            <h1 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-emerald-900 lg:text-4xl">
-              {title}
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600/90 font-medium italic">
-              " {description} "
-            </p>
-          </div>
-        </div>
+    <PageWrapper>
+      <Header 
+        title={title}
+        subtitle={description}
+        showBack={showBack}
+        action={badge && (
+          <span className="rounded-full bg-leaf-200/50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-leaf-800 shadow-sm border border-leaf-100">
+            {badge}
+          </span>
+        )}
+        maxWidth="max-w-5xl"
+      />
 
-        <div className="section-fade-delay flex-1">
+      {/* --- MAIN SHELL CONTENT --- */}
+      <motion.main
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="mx-auto max-w-5xl px-5 md:px-8"
+      >
+
+
+        {/* INJECTED PAGE CONTENT */}
+        <motion.div variants={itemVariants} className="pb-12">
           {children}
-        </div>
-      </div>
-
-      <footer className="border-t border-emerald-50 px-6 py-8 text-center bg-white/50">
-        <p className="text-xs text-emerald-700 font-semibold tracking-wide">
-          Powering practical tools for modern farming • Kisaan Sevak v1.0
-        </p>
-      </footer>
-    </div>
+        </motion.div>
+      </motion.main>
+    </PageWrapper>
   );
 }

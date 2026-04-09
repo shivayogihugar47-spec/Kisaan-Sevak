@@ -1,23 +1,37 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 
-export default function ProtectedRoute() {
-  const location = useLocation();
-  const { loading, isAuthenticated } = useAuth();
+/**
+ * Enhanced ProtectedRoute that enforces valid roles.
+ * Users must be authenticated AND have one of the required roles.
+ */
+export default function ProtectedRoute({ children, allowedRoles = [] }) {
+  const { profile, loading, isAuthenticated } = useAuth();
+  const { content } = useLanguage();
 
+  // If auth state is still determining if user exists, show a loading placeholder.
   if (loading) {
     return (
-      <main className="screen-shell justify-center">
-        <div className="panel px-6 py-10 text-center">
-          <p className="text-sm font-semibold text-leaf-700">Checking your session...</p>
-        </div>
-      </main>
+      <div className="min-h-screen flex items-center justify-center text-emerald-600 bg-emerald-50/50">
+        {content?.common?.loadingSecurePortal ?? "Loading Secure Portal..."}
+      </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace state={{ from: location }} />;
+    return <Navigate to="/" replace />;
   }
 
-  return <Outlet />;
+  // If no role checks are defined, just render
+  if (allowedRoles.length === 0) {
+    return children;
+  }
+
+  // If the user's role isn't in the allowed structure
+  if (!profile || !allowedRoles.includes(profile.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 }

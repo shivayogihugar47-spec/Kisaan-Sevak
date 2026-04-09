@@ -83,6 +83,21 @@ function getFallbackWeather() {
       minTemperature: `22\u00B0C`,
       precipitationProbability: 20,
     },
+    // Mock data for the new UI sections
+    hourlyForecast: [
+      { time: "12 PM", temperature: "28\u00B0C" },
+      { time: "1 PM", temperature: "29\u00B0C" },
+      { time: "2 PM", temperature: "29\u00B0C" },
+      { time: "3 PM", temperature: "28\u00B0C" },
+      { time: "4 PM", temperature: "27\u00B0C" },
+    ],
+    dailyForecast: [
+      { dayOfWeek: "Mon", condition: "Clear sky", minTemp: "20\u00B0C", maxTemp: "30\u00B0C" },
+      { dayOfWeek: "Tue", condition: "Mainly clear", minTemp: "21\u00B0C", maxTemp: "31\u00B0C" },
+      { dayOfWeek: "Wed", condition: "Rain", minTemp: "22\u00B0C", maxTemp: "28\u00B0C" },
+      { dayOfWeek: "Thu", condition: "Drizzle", minTemp: "21\u00B0C", maxTemp: "29\u00B0C" },
+      { dayOfWeek: "Fri", condition: "Clear sky", minTemp: "20\u00B0C", maxTemp: "30\u00B0C" },
+    ],
   };
 }
 
@@ -95,9 +110,10 @@ export async function fetchBelgaumWeather({ force = false, signal } = {}) {
     latitude: BELGAUM_COORDS.latitude,
     longitude: BELGAUM_COORDS.longitude,
     timezone: "auto",
-    forecast_days: 1,
+    forecast_days: 6, // 1 for today + 5 forward days
     current:
       "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day,precipitation",
+    hourly: "temperature_2m,weather_code",
     daily:
       "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
   };
@@ -113,15 +129,53 @@ export async function fetchBelgaumWeather({ force = false, signal } = {}) {
 
   const utcOffsetSeconds = response.utcOffsetSeconds();
   const current = response.current();
+  const hourly = response.hourly();
   const daily = response.daily();
 
-  if (!current || !daily) {
+  if (!current || !hourly || !daily) {
     throw new Error("Weather response was incomplete.");
   }
 
+  // Time arrays
+  const hourlyTimes = range(Number(hourly.time()), Number(hourly.timeEnd()), hourly.interval()).map(
+    (time) => new Date((time + utcOffsetSeconds) * 1000),
+  );
   const dailyTimes = range(Number(daily.time()), Number(daily.timeEnd()), daily.interval()).map(
     (time) => new Date((time + utcOffsetSeconds) * 1000),
   );
+
+  // Extract hourly data for the next ~12 hours
+  const now = new Date();
+  const hourlyTemps = hourly.variables(0).valuesArray();
+  const upcomingHourly = [];
+
+  for (let i = 0; i < hourlyTimes.length; i++) {
+    // Only show hours in the future, up to 12 items
+    if (hourlyTimes[i] >= now && upcomingHourly.length < 12) {
+      upcomingHourly.push({
+        time: hourlyTimes[i].toLocaleTimeString("en-IN", { hour: "numeric", hour12: true }),
+        temperature: formatTemperature(hourlyTemps[i]),
+      });
+    }
+  }
+
+  // Extract daily data for the next 5 days (skipping today, which is index 0)
+  const upcomingDaily = [];
+  const dailyCodes = daily.variables(0).valuesArray();
+  const dailyMax = daily.variables(1).valuesArray();
+  const dailyMin = daily.variables(2).valuesArray();
+
+  for (let i = 1; i <= 5; i++) {
+    // Make sure we have data for this index before pushing
+    if (dailyTimes[i]) {
+      upcomingDaily.push({
+        dayOfWeek: dailyTimes[i].toLocaleDateString("en-IN", { weekday: "short" }),
+        condition: getWeatherDescription(dailyCodes[i]),
+        maxTemp: formatTemperature(dailyMax[i]),
+        minTemp: formatTemperature(dailyMin[i]),
+      });
+    }
+  }
 
   const weather = {
     source: "open-meteo",
@@ -140,11 +194,13 @@ export async function fetchBelgaumWeather({ force = false, signal } = {}) {
     },
     daily: {
       date: dailyTimes[0],
-      weatherCode: daily.variables(0)?.valuesArray()?.[0] ?? null,
-      maxTemperature: formatTemperature(daily.variables(1)?.valuesArray()?.[0] ?? 0),
-      minTemperature: formatTemperature(daily.variables(2)?.valuesArray()?.[0] ?? 0),
+      weatherCode: dailyCodes?.[0] ?? null,
+      maxTemperature: formatTemperature(dailyMax?.[0] ?? 0),
+      minTemperature: formatTemperature(dailyMin?.[0] ?? 0),
       precipitationProbability: Math.round(daily.variables(3)?.valuesArray()?.[0] ?? 0),
     },
+    hourlyForecast: upcomingHourly,
+    dailyForecast: upcomingDaily,
   };
 
   weather.updatedAt = weather.updatedAtValue.toLocaleString("en-IN", {

@@ -1,231 +1,550 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
-  MapPin,
-  Droplets,
+  ArrowRight,
+  BadgeCheck,
   CloudRain,
-  Sun,
-  Store,
+  Droplets,
   FileText,
+  Navigation,
+  Mic,
+  LayoutGrid,
+  TrendingUp,
+  Tractor,
+  Wind,
+  Info,
+  CalendarDays,
+  Store,
+  ShieldCheck,
+  Sprout,
   Users,
-  Recycle,
-  Stethoscope,
-  Volume2,
-  ChevronRight,
-  Zap,
+  Waves,
 } from "lucide-react";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import Header from "../components/Header";
 import { useLanguage } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 import { getAgricultureNews } from "../services/newsService";
+import { getWeatherSummary } from "../i18n/translations";
+import useUserWeather from "../hooks/useUserWeather";
+
+const COPY = {
+  en: {
+    appNameShort: "KisaanSevak",
+    farmerFallback: "Farmer",
+    belgaumFallback: "Belgaum",
+    weatherUpdateFallback: "Weather update",
+    statRain: "Rain",
+    statRain1h: "Rain (1h)",
+    statHumidity: "Humidity",
+    statWind: "Wind",
+    modulesTitle: "Modules",
+    modulesSubtitle: "Open a tool to continue",
+    modulesHint: "Tap a card",
+    rentEquipment: "Rent equipment",
+    mandiPrices: "Mandi Prices",
+    liveCropSignals: "Live crop signals",
+    govtSchemes: "Govt Schemes",
+    benefitsNearby: "Benefits nearby",
+    community: "Community",
+    localFarmerNetwork: "Local farmer network",
+    askKisaanAI: "Ask Kisaan AI",
+    voiceAssistant: "Voice assistant",
+    criticalUpdates: "Critical Updates",
+    criticalUpdatesSubtitle: "Latest news + smart highlights",
+    agriculturePulse: "Agriculture Pulse",
+    today: "Today",
+    unableLoadNews: "Unable to load news",
+    fetchingLatestNews: "Fetching latest agriculture news...",
+    tapToOpenUpdate: "Tap to open the latest update and get ahead for today’s work.",
+    marketSignal: "Market signal",
+    steadyToday: "Steady today",
+    checkMandiHint: "Check Mandi for best dispatch",
+    fieldAdvisory: "Field advisory",
+    sprayWindow: "Spray window",
+    lateAfternoonSafer: "Late afternoon looks safer",
+    daily: "Daily",
+    tasklist: "Tasklist",
+    done: "done",
+    progressLabel: "Progress",
+    suggestedNext: "Suggested next",
+    openMandiCompare: "Open {mandi} and compare 2 nearby markets.",
+    goToMandi: "Go to Mandi",
+    open: "Open",
+    tasks: {
+      market: "Check Market Price",
+      leaf: "Upload Leaf Photo",
+      water: "Watering Schedule",
+    },
+    greeting: {
+      morning: "Good morning",
+      afternoon: "Good afternoon",
+      evening: "Good evening",
+      night: "Good night",
+    },
+    featured: {
+      insuranceSub: "New Feature",
+      insuranceTitle: "Weather Insurance",
+      insuranceDesc: "Protect your crop for just ₹50. Secure claim process.",
+      nutritionSub: "Scientific Farming",
+      nutritionTitle: "Soil Health Calc",
+      nutritionDesc: "Stop Urea waste with precision N-P-K based on your soil.",
+      communityTitle: "Community Pulse",
+      communityDesc: "50+ new discussions in your local area today.",
+      learnMore: "Try now",
+      sustainabilityTitle: "Sustainability Tip",
+      sustainabilityDesc: "Convert crop residue to biochar to increase soil fertility by 15% this season.",
+    },
+  },
+  hi: {
+    appNameShort: "किसानसेवक",
+    farmerFallback: "किसान",
+    belgaumFallback: "बेलगाम",
+    weatherUpdateFallback: "मौसम अपडेट",
+    statRain: "बारिश",
+    statRain1h: "बारिश (1h)",
+    statHumidity: "नमी",
+    statWind: "हवा",
+    modulesTitle: "मॉड्यूल",
+    modulesSubtitle: "आगे बढ़ने के लिए एक टूल खोलें",
+    modulesHint: "कार्ड चुनें",
+    rentEquipment: "उपकरण किराए पर",
+    mandiPrices: "मंडी भाव",
+    liveCropSignals: "लाइव कीमत संकेत",
+    govtSchemes: "सरकारी योजनाएँ",
+    benefitsNearby: "नज़दीकी लाभ",
+    community: "समुदाय",
+    localFarmerNetwork: "स्थानीय किसान नेटवर्क",
+    askKisaanAI: "किसान एआई से पूछें",
+    voiceAssistant: "वॉयस असिस्टेंट",
+    criticalUpdates: "महत्वपूर्ण अपडेट",
+    criticalUpdatesSubtitle: "ताज़ा खबर + स्मार्ट हाइलाइट्स",
+    agriculturePulse: "कृषि पल्स",
+    today: "आज",
+    unableLoadNews: "समाचार लोड नहीं हो पाए",
+    fetchingLatestNews: "ताज़ा कृषि समाचार लाए जा रहे हैं...",
+    tapToOpenUpdate: "लेटेस्ट अपडेट खोलें और आज के काम के लिए तैयार रहें।",
+    marketSignal: "बाज़ार संकेत",
+    steadyToday: "आज स्थिर",
+    checkMandiHint: "बेहतर डिस्पैच के लिए मंडी देखें",
+    fieldAdvisory: "खेत सलाह",
+    sprayWindow: "स्प्रे समय",
+    lateAfternoonSafer: "दोपहर बाद अधिक सुरक्षित",
+    daily: "दैनिक",
+    tasklist: "कार्यसूची",
+    done: "पूर्ण",
+    progressLabel: "प्रगति",
+    suggestedNext: "अगला सुझाव",
+    openMandiCompare: "{mandi} खोलें और 2 नज़दीकी मंडियों की तुलना करें।",
+    goToMandi: "मंडी जाएँ",
+    open: "खोलें",
+    tasks: {
+      market: "मंडी भाव देखें",
+      leaf: "पत्ती फोटो अपलोड करें",
+      water: "सिंचाई शेड्यूल",
+    },
+    greeting: {
+      morning: "सुप्रभात",
+      afternoon: "नमस्कार",
+      evening: "शुभ संध्या",
+      night: "शुभ रात्रि",
+    },
+    featured: {
+      insuranceSub: "नया फीचर",
+      insuranceTitle: "मौसम बीमा",
+      insuranceDesc: "सिर्फ ₹50 में अपनी फसल सुरक्षित करें। सुरक्षित दावा प्रक्रिया।",
+      nutritionSub: "वैज्ञानिक खेती",
+      nutritionTitle: "मिट्टी कैलकुलेटर",
+      nutritionDesc: "यूरिया की बर्बादी रोकें, सटीक N-P-K जानें।",
+      communityTitle: "समुदाय की हलचल",
+      communityDesc: "आज आपके क्षेत्र में 50+ नई चर्चाएं।",
+      learnMore: "अभी आज़माएं",
+      sustainabilityTitle: "टिकाऊ खेती टिप्स",
+      sustainabilityDesc: "मिट्टी की उर्वरता 15% बढ़ाने के लिए फसल अवशेषों को बायोचार में बदलें।",
+    },
+  },
+  kn: {
+    appNameShort: "ಕಿಸಾನ್‌ಸೇವಕ್",
+    farmerFallback: "ರೈತ",
+    belgaumFallback: "ಬೆಳಗಾವಿ",
+    weatherUpdateFallback: "ಹವಾಮಾನ ಅಪ್ಡೇಟ್",
+    statRain: "ಮಳೆ",
+    statRain1h: "ಮಳೆ (1h)",
+    statHumidity: "ತೇವಾಂಶ",
+    statWind: "ಗಾಳಿ",
+    modulesTitle: "ಮಾಡ್ಯೂಲ್‌ಗಳು",
+    modulesSubtitle: "ಮುಂದುವರಿಸಲು ಒಂದು ಟೂಲ್ ತೆರೆಯಿರಿ",
+    modulesHint: "ಕಾರ್ಡ್ ಟ್ಯಾಪ್ ಮಾಡಿ",
+    rentEquipment: "ಉಪಕರಣ ಬಾಡಿಗೆ",
+    mandiPrices: "ಮಂಡಿ ಬೆಲೆಗಳು",
+    liveCropSignals: "ಲೈವ್ ಬೆಲೆ ಸೂಚನೆಗಳು",
+    govtSchemes: "ಸರ್ಕಾರಿ ಯೋಜನೆಗಳು",
+    benefitsNearby: "ಸಮೀಪದ ಲಾಭಗಳು",
+    community: "ಸಮುದಾಯ",
+    localFarmerNetwork: "ಸ್ಥಳೀಯ ರೈತ ಜಾಲ",
+    askKisaanAI: "ಕಿಸಾನ್ ಎಐಗೆ ಕೇಳಿ",
+    voiceAssistant: "ಧ್ವನಿ ಸಹಾಯಕ",
+    criticalUpdates: "ಮುಖ್ಯ ಅಪ್ಡೇಟ್‌ಗಳು",
+    criticalUpdatesSubtitle: "ಇತ್ತೀಚಿನ ಸುದ್ದಿ + ಸ್ಮಾರ್ಟ್ ಹೈಲೈಟ್ಸ್",
+    agriculturePulse: "ಕೃಷಿ ಪಲ್ಸ್",
+    today: "ಇಂದು",
+    unableLoadNews: "ಸುದ್ದಿ ಲೋಡ್ ಆಗಲಿಲ್ಲ",
+    fetchingLatestNews: "ಇತ್ತೀಚಿನ ಕೃಷಿ ಸುದ್ದಿಯನ್ನು ತರುತ್ತಿದ್ದೇವೆ...",
+    tapToOpenUpdate: "ಇಂದಿನ ಕೆಲಸಕ್ಕೆ ಮುಂಚಿತವಾಗಿ ಇರಲು ಇತ್ತೀಚಿನ ಅಪ್ಡೇಟ್ ತೆರೆಯಿರಿ.",
+    marketSignal: "ಮಾರುಕಟ್ಟೆ ಸೂಚನೆ",
+    steadyToday: "ಇಂದು ಸ್ಥಿರ",
+    checkMandiHint: "ಉತ್ತಮ ಡಿಸ್ಪ್ಯಾಚ್‌ಗಾಗಿ ಮಂಡಿ ನೋಡಿ",
+    fieldAdvisory: "ಹೊಲ ಸಲಹೆ",
+    sprayWindow: "ಸ್ಪ್ರೇ ಸಮಯ",
+    lateAfternoonSafer: "ಸಂಜೆಯ ಹೊತ್ತಿಗೆ ಹೆಚ್ಚು ಸುರಕ್ಷಿತ",
+    daily: "ದೈನಂದಿನ",
+    tasklist: "ಕಾರ್ಯಪಟ್ಟಿ",
+    done: "ಆಯಿತು",
+    progressLabel: "ಪ್ರಗತಿ",
+    suggestedNext: "ಮುಂದಿನ ಸಲಹೆ",
+    openMandiCompare: "{mandi} ತೆರೆಯಿರಿ ಮತ್ತು 2 ಸಮೀಪದ ಮಂಡಿಗಳನ್ನು ಹೋಲಿಸಿ.",
+    goToMandi: "ಮಂಡಿಗೆ ಹೋಗಿ",
+    open: "ತೆರೆಯಿರಿ",
+    tasks: {
+      market: "ಮಾರುಕಟ್ಟೆ ಬೆಲೆ ನೋಡಿ",
+      leaf: "ಎಲೆ ಫೋಟೋ ಅಪ್ಲೋಡ್",
+      water: "ನೀರಾವರಿ ವೇಳಾಪಟ್ಟಿ",
+    },
+    greeting: {
+      morning: "ಶುಭೋದಯ",
+      afternoon: "ನಮಸ್ಕಾರ",
+      evening: "ಶುಭ ಸಂಜೆ",
+      night: "ಶುಭ ರಾತ್ರಿ",
+    },
+    featured: {
+      insuranceSub: "ಹೊಸ ವೈಶಿಷ್ಟ್ಯ",
+      insuranceTitle: "ಹವಾಮಾನ ವಿಮೆ",
+      insuranceDesc: "ಕೇವಲ ₹50 ಕ್ಕೆ ನಿಮ್ಮ ಬೆಳೆಯನ್ನು ರಕ್ಷಿಸಿ. ಸುಲಭ ಕ್ಲೈಮ್ ಪ್ರಕ್ರಿಯೆ.",
+      nutritionSub: "ವೈಜ್ಞಾನಿಕ ಕೃಷಿ",
+      nutritionTitle: "ಮಣ್ಣಿನ ಆರೋಗ್ಯ",
+      nutritionDesc: "ಯೂರಿಯಾ ವ್ಯರ್ಥ ಮಾಡುವುದನ್ನು ನಿಲ್ಲಿಸಿ. ನಿಖರ N-P-K ತಿಳಿಯಿರಿ.",
+      communityTitle: "ಸಮುದಾಯದ ಪಲ್ಸ್",
+      communityDesc: "ಇಂದು ನಿಮ್ಮ ಪರಿಸರದಲ್ಲಿ 50+ ಹೊಸ ಚರ್ಚೆಗಳು.",
+      learnMore: "ಈಗ ಪ್ರಯತ್ನಿಸಿ",
+      sustainabilityTitle: "ಸುಸ್ಥಿರತೆಯ ಸಲಹೆ",
+      sustainabilityDesc: "ಮಣ್ಣಿನ ಫಲವತ್ತತೆಯನ್ನು 15% ಹೆಚ್ಚಿಸಲು ಬೆಳೆ ಅವಶೇಷಗಳನ್ನು ಬಯೋಚಾರ್ ಆಗಿ ಪರಿವರ್ತಿಸಿ.",
+    },
+  },
+};
+
+function getTimeSlot(date) {
+  const hour = date.getHours();
+  return hour < 5 ? "night" : hour < 12 ? "morning" : hour < 17 ? "afternoon" : hour < 21 ? "evening" : "night";
+}
+
+function formatCopy(template, vars) {
+  if (typeof template !== "string" || !template) return "";
+  return template.replace(/\{(\w+)\}/g, (_, key) => {
+    const value = vars?.[key];
+    return value === undefined || value === null ? "" : String(value);
+  });
+}
 
 export default function Dashboard() {
-  const { content } = useLanguage();
+  const { language, content } = useLanguage();
+  const t = COPY[language] || COPY.en;
+  const { profile } = useAuth();
   const [news, setNews] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [newsError, setNewsError] = useState("");
+  
+  const { weather, usingFallback } = useUserWeather();
+  const temperature = String(weather?.current?.temperature || "28°").replace("C", "");
+  const weatherSummary =
+    getWeatherSummary(language, weather?.current?.weatherCode) || weather?.summary || t.weatherUpdateFallback;
+  const rainChance = weather?.daily?.precipitationProbability ?? null;
+  const humidity = weather?.current?.humidity || "65%";
+  const wind = weather?.current?.wind || "9 km/h";
 
   useEffect(() => {
-    const fetchNews = async () => {
-      setLoading(true);
-      try {
-        const articles = await getAgricultureNews("agriculture India", 1);
-        if (articles && articles.length > 0) {
-          setNews(articles[0]);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-      setLoading(false);
+    let cancelled = false;
+    setNewsError("");
+    getAgricultureNews("agriculture India", 1)
+      .then((articles) => {
+        if (!cancelled && articles?.[0]) setNews(articles[0]);
+      })
+      .catch((e) => {
+        if (!cancelled) setNewsError(e?.message || t.unableLoadNews);
+      });
+    return () => {
+      cancelled = true;
     };
-    fetchNews();
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#FAF7F2] font-sans text-[#032115]">
-      {/* --- TOP NAV --- */}
-      <nav className="px-6 py-5 flex items-center justify-between section-fade">
-        <div className="flex items-center gap-2">
-           <div className="h-8 w-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-md">
-              <Zap size={18} fill="currentColor" />
-           </div>
-           <span className="text-xl font-black tracking-tight">Kisaan Sevak</span>
-        </div>
-        <LanguageSwitcher />
-      </nav>
+    <div className="min-h-screen bg-[#F4F7F5] text-[#1A2E26] font-sans antialiased">
+      <Header 
+        title={content?.dashboard?.title ?? t.appNameShort} 
+        subtitle={t.today}
+        maxWidth="max-w-5xl"
+      />
 
-      <div className="px-6 max-w-2xl mx-auto space-y-8">
+      <main className="max-w-5xl mx-auto p-4 space-y-4 pb-24 md:px-8">
         
-        {/* --- GREETING --- */}
-        <header className="section-fade-delay">
-          <h1 className="text-3xl font-black leading-tight text-slate-900">
-            {content.dashboard.greeting}
-          </h1>
-          <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm mt-1 uppercase tracking-wider">
-             <MapPin size={14} /> Belgaum • {new Date().toLocaleDateString(content.locale, { weekday: 'long' })}
+        {/* Compact Weather & Greeting Card */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-emerald-900 to-emerald-950 rounded-[2rem] p-6 text-white shadow-xl shadow-emerald-900/20">
+          <div className="relative z-10 flex justify-between items-start">
+            <div>
+              <p className="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
+                <Navigation size={12} fill="currentColor" />{" "}
+                {weather?.location || profile?.locationLabel || content?.locationLabel || t.belgaumFallback}
+              </p>
+              <h2 className="text-3xl font-bold tracking-tight">
+                {t.greeting[getTimeSlot(new Date())]},{" "}
+                <span className="text-emerald-300">{profile?.name || t.farmerFallback}</span>
+              </h2>
+            </div>
+            <div className="text-right">
+              <span className="text-5xl font-black tracking-tighter">{temperature}</span>
+              <p className="text-xs font-medium text-emerald-200/90">{weatherSummary}</p>
+            </div>
           </div>
-        </header>
+          
+          <div className="mt-8 grid grid-cols-3 gap-2">
+            <QuickStat
+              label={typeof rainChance === "number" ? t.statRain : t.statRain1h}
+              value={
+                typeof rainChance === "number"
+                  ? `${rainChance}%`
+                  : `${Number(weather?.current?.rain1hMm ?? 0).toFixed(1)} mm`
+              }
+              icon={CloudRain}
+            />
+            <QuickStat label={t.statHumidity} value={humidity} icon={Droplets} />
+            <QuickStat label={t.statWind} value={wind} icon={Wind} />
+          </div>
 
-        {/* --- AIRY PREMIUM WEATHER HERO --- */}
-        <div className="relative group overflow-hidden h-[300px] md:h-[260px] rounded-[40px] shadow-2xl section-fade-delay border border-white">
-           {/* Dynamic Background Image */}
-           <img 
-             src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2064&auto=format&fit=crop" 
-             className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
-             alt="Field"
-           />
-           {/* Elegant Overlay */}
-           <div className="absolute inset-0 bg-gradient-to-tr from-emerald-950/80 via-emerald-900/40 to-transparent p-8 md:p-10 flex flex-col justify-between">
-              
-              <div className="flex justify-between items-start">
-                 <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 shadow-sm">
-                    <div className="flex items-center gap-2">
-                       <MapPin size={14} className="text-emerald-300" />
-                       <span className="text-xs font-black uppercase tracking-widest text-white">{content.locationLabel}</span>
-                    </div>
-                 </div>
-                 <button className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-emerald-500 transition-colors">
-                    <Volume2 size={22} />
-                 </button>
-              </div>
+          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl"></div>
+        </section>
 
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                 <div>
-                    <h2 className="text-7xl font-black text-white leading-none tracking-tighter">28°</h2>
-                    <p className="text-emerald-100 font-bold text-lg mt-2 flex items-center gap-2">
-                       <Sun size={20} className="text-yellow-400" /> {content.weather.codes.clear} • 32° High
-                    </p>
-                 </div>
-                 
-                 <div className="flex gap-4">
-                    <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-[28px] px-6 py-4 flex items-center gap-3">
-                       <Droplets size={20} className="text-emerald-300" />
-                       <div>
-                          <p className="text-[10px] font-black text-emerald-100/60 uppercase tracking-widest leading-none mb-1">{content.brief.humidity}</p>
-                          <p className="text-xl font-black text-white">65%</p>
-                       </div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-[28px] px-6 py-4 flex items-center gap-3">
-                       <CloudRain size={20} className="text-emerald-300" />
-                       <div>
-                          <p className="text-[10px] font-black text-emerald-100/60 uppercase tracking-widest leading-none mb-1">{content.weather.codes.rain}</p>
-                          <p className="text-xl font-black text-white">10%</p>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-           </div>
-        </div>
+        {/* Modules grid */}
+        <section className="rounded-[2rem] border border-slate-200/60 bg-white p-4 shadow-sm">
+          <div className="flex items-end justify-between gap-4 px-1 pb-3">
+            <div>
+              <p className="text-sm font-black text-slate-900">{t.modulesTitle}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">{t.modulesSubtitle}</p>
+            </div>
+            <p className="hidden text-xs font-semibold text-slate-500 sm:block">{t.modulesHint}</p>
+          </div>
 
-        {/* --- VIBRANT BENTO GRID (Solid Soft Colors) --- */}
-        <div className="grid grid-cols-2 gap-4 section-fade-late">
-          {[
-            {
-              title: content.dashboard.modules[0].title,
-              subtitle: content.dashboard.modules[0].subtitle,
-              icon: Sun,
-              bg: "bg-[#E2F2E9]",
-              text: "text-[#065F46]",
-              iconBg: "bg-white",
-              route: "/brief",
-            },
-            {
-              title: content.dashboard.modules[1].title,
-              subtitle: content.dashboard.modules[1].subtitle,
-              icon: Store,
-              bg: "bg-[#FFF4E6]",
-              text: "text-[#92400E]",
-              iconBg: "bg-white",
-              route: "/mandi",
-            },
-            {
-              title: content.dashboard.modules[2].title,
-              subtitle: content.dashboard.modules[2].subtitle,
-              icon: Stethoscope,
-              bg: "bg-[#FEE2E2]",
-              text: "text-[#991B1B]",
-              iconBg: "bg-white",
-              route: "/crop-doctor",
-            },
-            {
-              title: content.dashboard.modules[3].title,
-              subtitle: content.dashboard.modules[3].subtitle,
-              icon: FileText,
-              bg: "bg-[#DBEAFE]",
-              text: "text-[#1E40AF]",
-              iconBg: "bg-white",
-              route: "/schemes",
-            },
-            {
-              title: content.dashboard.modules[4].title,
-              subtitle: content.dashboard.modules[4].subtitle,
-              icon: Recycle,
-              bg: "bg-[#F0FDF4]",
-              text: "text-[#166534]",
-              iconBg: "bg-white",
-              route: "/waste-to-wealth",
-            },
-            {
-              title: content.dashboard.modules[5].title,
-              subtitle: content.dashboard.modules[5].subtitle,
-              icon: Users,
-              bg: "bg-[#F1F5F9]",
-              text: "text-[#334155]",
-              iconBg: "bg-white",
-              route: "/network",
-            },
-          ].map((item, i) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={i}
-                to={item.route}
-                className={`relative ${item.bg} p-6 rounded-[32px] no-underline transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between h-[170px] border border-transparent hover:border-white shadow-sm`}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <ModuleCard
+              to="/rentals"
+              title={content?.sidebar?.krishiKiraya ?? t.modulesTitle}
+              subtitle={t.rentEquipment}
+              icon={Tractor}
+              color="from-purple-500 to-fuchsia-500"
+              openLabel={t.open}
+            />
+            <ModuleCard to="/mandi" title={t.mandiPrices} subtitle={t.liveCropSignals} icon={Store} color="from-orange-500 to-amber-500" openLabel={t.open} />
+            <ModuleCard to="/schemes" title={t.govtSchemes} subtitle={t.benefitsNearby} icon={BadgeCheck} color="from-blue-600 to-sky-500" openLabel={t.open} />
+            <ModuleCard to="/network" title={t.community} subtitle={t.localFarmerNetwork} icon={Users} color="from-slate-800 to-slate-600" openLabel={t.open} />
+            <ModuleCard to="/chat" title={t.askKisaanAI} subtitle={t.voiceAssistant} icon={Mic} color="from-emerald-700 to-emerald-500" openLabel={t.open} />
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2 space-y-4">
+            <SectionHeader title={t.criticalUpdates} subtitle={t.criticalUpdatesSubtitle} />
+            <article className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
+              <a
+                href={news?.url || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex gap-4 group"
               >
-                <div className={`${item.iconBg} h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm`}>
-                  <Icon size={24} className={item.text} strokeWidth={2.5} />
+                <div className="w-20 h-20 rounded-2xl shrink-0 overflow-hidden bg-slate-100">
+                  {news?.urlToImage ? (
+                    <img
+                      src={news.urlToImage}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      alt="news"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-emerald-50 to-slate-50" />
+                  )}
                 </div>
-                
-                <div>
-                   <h4 className={`text-[17px] font-black leading-tight ${item.text}`}>
-                     {item.title}
-                   </h4>
-                   <div className="flex items-center justify-between mt-1">
-                      <p className={`text-[10px] font-bold opacity-60 uppercase tracking-widest`}>
-                        {item.subtitle}
-                      </p>
-                      <ChevronRight size={14} className="opacity-40" />
-                   </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                      {t.agriculturePulse}
+                    </p>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest">
+                      <CalendarDays size={12} /> {t.today}
+                    </span>
+                  </div>
+
+                  <h4 className="mt-2 font-black text-slate-900 leading-tight line-clamp-2 group-hover:text-emerald-700 transition-colors">
+                    {news?.title || (newsError ? t.unableLoadNews : t.fetchingLatestNews)}
+                  </h4>
+
+                  <p className="mt-2 text-xs font-semibold text-slate-500 line-clamp-2">
+                    {news?.description || (newsError ? newsError : t.tapToOpenUpdate)}
+                  </p>
                 </div>
-              </Link>
-            );
-          })}
+
+                <div className="shrink-0 flex items-center">
+                  <div className="h-10 w-10 rounded-2xl border border-slate-100 bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
+                    <ArrowRight size={18} />
+                  </div>
+                </div>
+              </a>
+            </article>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <PromotionalCard
+                to="/insurance"
+                sub={t.featured.insuranceSub}
+                title={t.featured.insuranceTitle}
+                desc={t.featured.insuranceDesc}
+                icon={ShieldCheck}
+                color="bg-indigo-600"
+                button={t.featured.learnMore}
+              />
+              <PromotionalCard
+                to="/nutrition"
+                sub={t.featured.nutritionSub}
+                title={t.featured.nutritionTitle}
+                desc={t.featured.nutritionDesc}
+                icon={Droplets}
+                color="bg-emerald-600"
+                button={t.featured.learnMore}
+              />
+            </div>
+          </div>
+
+          <aside className="space-y-4">
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-sun-400 to-sun-600 p-6 text-white shadow-lg">
+              <div className="relative z-10">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md">
+                  <Sprout size={20} className="text-white" />
+                </div>
+                <h3 className="font-display text-lg font-black">{t.featured.sustainabilityTitle}</h3>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-sun-50">
+                  {t.featured.sustainabilityDesc}
+                </p>
+              </div>
+              <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+            </div>
+
+            <Link
+              to="/network"
+              className="group block overflow-hidden rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-sm transition hover:shadow-md"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-900">
+                  <Users size={20} />
+                </div>
+                <div className="flex -space-x-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-7 w-7 rounded-full border-2 border-white bg-slate-200 overflow-hidden">
+                      <img src={`https://i.pravatar.cc/100?u=${i + 10}`} alt="user" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <h3 className="font-display text-lg font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
+                {t.featured.communityTitle}
+              </h3>
+              <p className="mt-2 text-xs font-semibold text-slate-500 leading-relaxed">
+                {t.featured.communityDesc}
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-sm font-black text-emerald-700">
+                {t.featured.learnMore} <ArrowRight size={16} />
+              </div>
+            </Link>
+          </aside>
         </div>
+      </main>
 
-        {/* --- LATEST UPDATES --- */}
-        <div className="section-fade-late pt-4 pb-12">
-           <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-black">Latest for Farm</h3>
-              <button className="text-[11px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-50 px-3 py-1.5 rounded-full">Explore all</button>
-           </div>
+      {/* Floating Bottom Nav for Mobile-First usage */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 px-6 py-3 md:hidden flex justify-between items-center z-50">
+        <NavIcon icon={LayoutGrid} active />
+        <NavIcon icon={Store} />
+        <div className="bg-emerald-600 p-3 rounded-full -mt-12 shadow-lg border-4 border-[#F4F7F5] text-white">
+          <Mic size={24} />
+        </div>
+        <NavIcon icon={TrendingUp} />
+        <NavIcon icon={Navigation} />
+      </footer>
+    </div>
+  );
+}
 
-           <a
-             href={news?.url || "#"}
-             target="_blank"
-             rel="noopener noreferrer"
-             className="flex gap-4 items-center bg-white p-4 rounded-[24px] border border-slate-200/60 shadow-sm group no-underline"
-           >
-              <div className="h-20 w-20 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0">
-                 <img src={news?.urlToImage || "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?q=80&w=2045&auto=format&fit=crop"} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700" alt="news" />
-              </div>
-              <div className="flex-1">
-                 <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">{content.dashboard.newsLabel}</p>
-                 <h4 className="text-sm font-black leading-snug line-clamp-2 text-slate-900 group-hover:text-emerald-700 transition-colors">
-                    {loading ? content.common.loading : news?.title || "Agriculture Update"}
-                 </h4>
-              </div>
-              <ChevronRight size={20} className="text-slate-300 group-hover:text-emerald-600" />
-           </a>
+function PromotionalCard({ to, sub, title, desc, icon: Icon, color, button }) {
+  return (
+    <Link
+      to={to}
+      className="group relative overflow-hidden rounded-[2.5rem] bg-white p-6 shadow-sm transition hover:shadow-md active:scale-[0.99] md:p-8"
+    >
+      <div className="relative z-10">
+        <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${color} text-white shadow-lg shadow-black/5`}>
+          <Icon size={24} />
+        </div>
+        <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-emerald-600 transition-colors">
+          {sub}
+        </p>
+        <h3 className="font-display text-xl font-black text-slate-900 md:text-2xl">{title}</h3>
+        <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500 md:text-sm">
+          {desc}
+        </p>
+        <div className="mt-6 flex items-center gap-2 text-sm font-black text-emerald-700">
+          {button} <ArrowRight size={16} className="transition group-hover:translate-x-1" />
         </div>
       </div>
-    </main>
+      <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-slate-50 transition group-hover:bg-emerald-50" />
+    </Link>
+  );
+}
+
+function ModuleCard({ to, title, subtitle, icon: Icon, color, openLabel }) {
+  return (
+    <Link
+      to={to}
+      className="group rounded-3xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:shadow-md active:scale-[0.99]"
+    >
+      <div className={`h-11 w-11 rounded-2xl bg-gradient-to-br ${color} text-white flex items-center justify-center shadow-sm ring-1 ring-black/5`}>
+        <Icon size={20} strokeWidth={2.5} />
+      </div>
+      <p className="mt-3 text-sm font-black text-slate-900">{title}</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">{subtitle}</p>
+
+      <div className="mt-3 flex items-center justify-between">
+        <span className="text-xs font-black text-emerald-700">{openLabel}</span>
+        <ArrowRight size={16} className="text-slate-300 transition group-hover:text-emerald-700" />
+      </div>
+    </Link>
+  );
+}
+
+function QuickStat({ label, value, icon: Icon }) {
+  return (
+    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10 text-center">
+      <Icon size={16} className="mx-auto mb-1 text-emerald-300" />
+      <p className="text-[10px] font-bold opacity-60 uppercase tracking-tighter">{label}</p>
+      <p className="font-bold text-sm">{value}</p>
+    </div>
+  );
+}
+
+function NavIcon({ icon: Icon, active }) {
+  return (
+    <button className={`p-2 ${active ? 'text-emerald-600' : 'text-slate-400'}`}>
+      <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+    </button>
+  );
+}
+
+function SectionHeader({ title, subtitle }) {
+  return (
+    <div className="px-1">
+      <p className="text-sm font-black text-slate-900">{title}</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">{subtitle}</p>
+    </div>
   );
 }

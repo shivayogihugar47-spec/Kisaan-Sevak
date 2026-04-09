@@ -1,71 +1,145 @@
 import { useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
-import { Menu, Search, Bell } from "lucide-react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Menu, Leaf } from "lucide-react";
+
+// Layout & Navigation Components
 import Sidebar from "./components/Sidebar";
-import ChatPage from "./pages/ChatPage";
-import CropDoctorPage from "./pages/CropDoctorPage";
-import DailyBriefPage from "./pages/DailyBriefPage";
+
+// Core Farmer Pages
+import HomePage from "./pages/HomePage";
 import DashboardPage from "./pages/DashboardPage";
-import KisaanNetworkPage from "./pages/KisaanNetworkPage";
 import MandiMitraPage from "./pages/MandiMitraPage";
 import SarkarSaathiPage from "./pages/SarkarSaathiPage";
 import WasteToWealthPage from "./pages/WasteToWealthPage";
+import KisaanNetworkPage from "./pages/KisaanNetworkPage";
+import ChatPage from "./pages/ChatPage";
+import FarmerProfilePage from "./pages/FarmerProfilePage";
 
+// Advanced Ecosystem Pages
+import KrishiKiraya from "./pages/KrishiKiraya";
+import SoilNutrition from "./pages/SoilNutrition";
+import AgriInsure from "./pages/AgriInsure";
+
+// Role-Based Admin & Enterprise Pages
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import EnterpriseDashboardPage from "./pages/EnterpriseDashboardPage";
+import UnauthorizedPage from "./pages/UnauthorizedPage";
+import OnboardingPage from "./pages/OnboardingPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+// Context & Auth
+import { useAuth } from "./context/AuthContext";
+import { useLanguage } from "./context/LanguageContext";
+
+/**
+ * Main Application Component
+ * Handles global layout, sidebar state, and strictly isolated role-based routing.
+ */
 export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  // ADDED: isAuthenticated to prevent crashing on the login page
+  const { loading, profile, isAuthenticated, portal } = useAuth();
+  const { content } = useLanguage();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-leaf-50">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-leaf-200 border-t-leaf-700"></div>
+      </div>
+    );
+  }
+
+  // Determine if we should show the global sidebar based on role
+  // FIX: Only show if the user is actually authenticated
+  const userPortal = portal || profile?.role || "";
+  const isFarmerOrSeller = isAuthenticated && (userPortal === "farmer" || userPortal === "seller");
+  const isAdminPage = location.pathname.startsWith("/admin");
+  const showSidebar = isFarmerOrSeller && !isAdminPage;
 
   return (
-    <div className="relative min-h-screen bg-emerald-50/30 flex overflow-x-hidden">
-      {/* Sidebar */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-72 transition-all duration-300">
-        
-        {/* Mobile Top Bar (Professional Clean Style) */}
-        <header className="lg:hidden sticky top-0 z-[40] bg-[#FAF7F2]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 -ml-2 rounded-xl text-emerald-900 hover:bg-emerald-50 active:scale-90 transition-all"
-              aria-label="Open menu"
-            >
+    <div className="flex min-h-screen bg-leaf-50 font-sans text-leaf-900 selection:bg-leaf-200">
+
+      {/* SIDEBAR - Only visible to authenticated Farmers and Sellers */}
+      {showSidebar && (
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      )}
+
+      {/* MAIN CONTENT AREA */}
+      <div className={`flex flex-1 flex-col transition-all duration-300 ${showSidebar ? "md:pl-72" : ""}`}>
+
+        {/* MOBILE TOP NAVIGATION TRAY (Only for Farmers/Sellers) */}
+        {showSidebar && (
+          <div className="sticky top-0 z-40 flex items-center justify-between bg-white px-5 py-4 shadow-sm md:hidden">
+            <div className="flex items-center gap-2">
+              <Leaf className="text-leaf-600" size={24} />
+              <span className="font-display text-xl font-bold">{content?.dashboard?.title ?? "Kisaan Sevak"}</span>
+            </div>
+            <button onClick={() => setIsSidebarOpen(true)} className="text-leaf-600">
               <Menu size={24} />
             </button>
-            
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full border border-emerald-100 p-0.5 shadow-sm overflow-hidden">
-                <img 
-                  src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=b6e3f4" 
-                  alt="Profile" 
-                  className="h-full w-full rounded-full object-cover"
-                />
-              </div>
-              <span className="font-bold text-emerald-950 text-[17px] tracking-tight">Kisaan Sevak</span>
-            </div>
           </div>
-          
-          <div className="flex items-center gap-1 bg-white/50 px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
-             <span className="text-[12px] font-bold text-slate-600">A/文</span>
-          </div>
-        </header>
+        )}
 
         <main className="flex-1">
           <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/brief" element={<DailyBriefPage />} />
-            <Route path="/mandi" element={<MandiMitraPage />} />
-            <Route path="/crop-doctor" element={<CropDoctorPage />} />
-            <Route path="/schemes" element={<SarkarSaathiPage />} />
-            <Route path="/waste-to-wealth" element={<WasteToWealthPage />} />
-            <Route path="/network" element={<KisaanNetworkPage />} />
-            <Route path="/chat" element={<ChatPage />} />
-            
-            {/* Redirects */}
-            <Route path="/farmer-dashboard" element={<Navigate to="/" replace />} />
-            <Route path="/onboarding" element={<Navigate to="/" replace />} />
-            <Route path="/buyer-dashboard" element={<Navigate to="/" replace />} />
+            {/* ========================================== */}
+            {/* PUBLIC / AUTH ROUTE                        */}
+            {/* ========================================== */}
+            <Route path="/" element={<HomePage />} />
+
+            {/* ========================================== */}
+            {/* FARMER & SELLER ONLY ROUTES                */}
+            {/* ========================================== */}
+            <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><DashboardPage /></ProtectedRoute>} />
+            <Route path="/mandi" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><MandiMitraPage /></ProtectedRoute>} />
+            <Route path="/schemes" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><SarkarSaathiPage /></ProtectedRoute>} />
+            <Route path="/waste-to-wealth" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><WasteToWealthPage /></ProtectedRoute>} />
+            <Route path="/network" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><KisaanNetworkPage /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><ChatPage /></ProtectedRoute>} />
+            <Route path="/rentals" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><KrishiKiraya /></ProtectedRoute>} />
+            <Route path="/nutrition" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><SoilNutrition /></ProtectedRoute>} />
+            <Route path="/insurance" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><AgriInsure /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><FarmerProfilePage /></ProtectedRoute>} />
+
+            {/* ========================================== */}
+            {/* ENTERPRISE & BUYER ONLY ROUTES             */}
+            {/* ========================================== */}
+            <Route path="/enterprise" element={
+              <ProtectedRoute allowedRoles={['buyer', 'enterprise']}>
+                <EnterpriseDashboardPage />
+              </ProtectedRoute>
+            } />
+
+            {/* ========================================== */}
+            {/* ADMIN ONLY ROUTES                          */}
+            {/* ========================================== */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'farmer', 'seller', 'buyer', 'enterprise']}>
+                  <AdminDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ========================================== */}
+            {/* FALLBACKS & REDIRECTS                      */}
+            {/* ========================================== */}
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
+            {/* Legacy redirects */}
+            <Route path="/farmer-dashboard" element={<ProtectedRoute allowedRoles={['farmer']}><DashboardPage /></ProtectedRoute>} />
+            <Route path="/buyer-dashboard" element={<ProtectedRoute allowedRoles={['buyer', 'enterprise']}><EnterpriseDashboardPage /></ProtectedRoute>} />
+            <Route path="/onboarding" element={
+              isAuthenticated
+                ? <Navigate to={userPortal === "buyer" || userPortal === "enterprise" ? "/buyer-dashboard" : userPortal === "admin" ? "/admin" : "/farmer-dashboard"} replace />
+                : <OnboardingPage />
+            } />
             <Route path="/seller-dashboard" element={<Navigate to="/" replace />} />
+
+            {/* 404 Catch-All */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

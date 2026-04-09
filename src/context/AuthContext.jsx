@@ -1,181 +1,158 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import {
-  onAuthStateChanged,
-  signInWithPhoneNumber,
-  signOut as firebaseSignOut,
-  updateProfile,
-} from "firebase/auth";
-import {
-  buildFirebaseUser,
-  getProfileForUser,
-  normalizePhoneInput,
-  saveStoredProfile,
-} from "../lib/auth";
-import {
-  ensureRecaptchaVerifier,
-  firebaseAuth,
-  isFirebasePhoneAuthTestMode,
-  resetRecaptchaVerifier,
-} from "../lib/firebase";
 
 const AuthContext = createContext(null);
+const SESSION_STORAGE_KEY = "kisaan-sevak-otp-session";
 
-function mapFirebaseError(error) {
-  const errorCode = String(error?.code || "");
-
-  if (errorCode.includes("invalid-phone-number")) {
-    return "Enter a valid phone number with country code.";
+function readSession() {
+  try {
+    const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
   }
+}
 
-  if (errorCode.includes("too-many-requests")) {
-    return "Too many OTP attempts right now. Please try again later.";
+function writeSession(session) {
+  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+function clearSession() {
+  try {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // ignore
   }
+}
 
-  if (errorCode.includes("invalid-verification-code")) {
-    return "The OTP code is invalid.";
-  }
-
-  if (errorCode.includes("code-expired")) {
-    return "The OTP has expired. Please request a new one.";
-  }
-
-  if (errorCode.includes("missing-client-identifier")) {
-    return "Firebase Phone Auth is not fully configured for this app yet.";
-  }
-
-  if (errorCode.includes("unauthorized-domain")) {
-    return "This domain is not allowed for Firebase Phone Auth. Use Firebase Hosting or another real domain instead of localhost.";
-  }
-
-  if (errorCode.includes("invalid-app-credential") || errorCode.includes("captcha-check-failed")) {
-    return "Firebase rejected the verification request. If you are testing on localhost, Phone Auth will not work there.";
-  }
-
-  return error?.message || "Authentication failed";
+function buildSessionProfile({ phone, portal, name, locationLabel, farmSize, mainCrop, meta }) {
+  const cleanName = String(name || "").trim() || "User";
+  return {
+    id: phone,
+    name: cleanName,
+    phone,
+    locationLabel: String(locationLabel || "").trim(),
+    farmSize: String(farmSize || "").trim(),
+    mainCrop: String(mainCrop || "").trim(),
+    role: portal, // keep compatibility with existing route guards/sidebar
+    meta: meta || null,
+  };
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [portal, setPortal] = useState("");
   const [loading, setLoading] = useState(true);
-  const [confirmationResult, setConfirmationResult] = useState(null);
-  const [pendingPhone, setPendingPhone] = useState("");
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
-      const nextUser = buildFirebaseUser(firebaseUser);
+    const session = readSession();
+    if (session?.phone && session?.portal) {
+      const nextUser = {
+        id: session.phone,
+        uid: session.phone,
+        name: session?.name || "User",
+        identifier: session.phone,
+      };
       setUser(nextUser);
-      setProfile(getProfileForUser(firebaseUser));
-      setLoading(false);
-    });
-
-    return unsubscribe;
+      setPortal(session.portal);
+      setProfile(
+        buildSessionProfile({
+          phone: session.phone,
+          portal: session.portal,
+          name: session?.name,
+          locationLabel: session?.locationLabel,
+          farmSize: session?.farmSize,
+          mainCrop: session?.mainCrop,
+          meta: session?.meta,
+        }),
+      );
+    }
+    setLoading(false);
   }, []);
 
-  async function requestOtp(phone) {
-    const normalizedPhone = normalizePhoneInput(phone);
+  async function signInWithOtp({ phone, portal: nextPortal, name, locationLabel, farmSize, mainCrop, meta }) {
+    const cleanPhone = String(phone || "").trim();
+    const cleanPortal = String(nextPortal || "").trim();
+    const cleanName = String(name || "").trim() || "User";
+    const cleanLocationLabel = String(locationLabel || "").trim();
+    const cleanFarmSize = String(farmSize || "").trim();
+    const cleanMainCrop = String(mainCrop || "").trim();
 
-    if (!normalizedPhone) {
-      throw new Error("Enter a valid phone number with country code.");
+    if (!cleanPhone || !cleanPortal) {
+      throw new Error("Phone and portal are required.");
     }
 
-    if (
-      typeof window !== "undefined" &&
-      ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
-      !isFirebasePhoneAuthTestMode
-    ) {
-      throw new Error(
-        "Firebase Phone Auth on localhost requires Firebase test phone numbers. Turn on VITE_FIREBASE_USE_TEST_PHONE_AUTH=true or deploy to a real domain.",
-      );
-    }
+    const nextUser = {
+      id: cleanPhone,
+      uid: cleanPhone,
+      name: cleanName,
+      identifier: cleanPhone,
+    };
 
-    try {
-      const verifier = ensureRecaptchaVerifier();
-      await verifier.render();
-      const nextConfirmationResult = await signInWithPhoneNumber(
-        firebaseAuth,
-        normalizedPhone,
-        verifier,
-      );
-
-      setPendingPhone(normalizedPhone);
-      setConfirmationResult(nextConfirmationResult);
-      return { phone: normalizedPhone };
-    } catch (error) {
-      await resetRecaptchaVerifier();
-      throw new Error(mapFirebaseError(error));
-    }
-  }
-
-  async function verifyOtp(phone, otp) {
-    if (!confirmationResult) {
-      throw new Error("Request a new OTP and try again.");
-    }
-
-    try {
-      const result = await confirmationResult.confirm(String(otp || "").trim());
-      const nextUser = buildFirebaseUser(result.user);
-      const nextProfile = getProfileForUser(result.user);
-      setUser(nextUser);
-      setProfile(nextProfile);
-      setConfirmationResult(null);
-      setPendingPhone(normalizePhoneInput(phone) || nextUser?.phone || "");
-      return nextProfile;
-    } catch (error) {
-      throw new Error(mapFirebaseError(error));
-    }
-  }
-
-  async function completeProfile(payload) {
-    if (!firebaseAuth.currentUser) {
-      throw new Error("No authenticated user found");
-    }
-
-    const nextName = String(payload?.name || "").trim() || "User";
-    const nextProfile = saveStoredProfile(firebaseAuth.currentUser.uid, {
-      name: nextName,
-      phone: firebaseAuth.currentUser.phoneNumber || pendingPhone || "",
-      role: payload?.role || "",
+    setUser(nextUser);
+    setPortal(cleanPortal);
+    setProfile(
+      buildSessionProfile({
+        phone: cleanPhone,
+        portal: cleanPortal,
+        name: cleanName,
+        locationLabel: cleanLocationLabel,
+        farmSize: cleanFarmSize,
+        mainCrop: cleanMainCrop,
+        meta,
+      }),
+    );
+    writeSession({
+      phone: cleanPhone,
+      portal: cleanPortal,
+      name: cleanName,
+      locationLabel: cleanLocationLabel,
+      farmSize: cleanFarmSize,
+      mainCrop: cleanMainCrop,
+      meta: meta || null,
     });
 
-    if (firebaseAuth.currentUser.displayName !== nextName) {
-      await updateProfile(firebaseAuth.currentUser, { displayName: nextName }).catch(() => null);
-    }
-
-    setUser(buildFirebaseUser(firebaseAuth.currentUser));
-    setProfile(nextProfile);
-    return nextProfile;
+    return { phone: cleanPhone, portal: cleanPortal };
   }
 
-  async function refreshProfile() {
-    const nextProfile = getProfileForUser(firebaseAuth.currentUser);
-    setProfile(nextProfile);
-    return nextProfile;
+  function updateSession(partial) {
+    setUser((prev) => {
+      if (!prev?.id) return prev;
+      return { ...prev, ...(partial?.user || {}) };
+    });
+
+    setProfile((prev) => {
+      if (!prev?.id) return prev;
+      return { ...prev, ...(partial?.profile || {}) };
+    });
+
+    const current = readSession() || {};
+    const next = {
+      ...current,
+      ...(partial?.session || {}),
+    };
+    writeSession(next);
   }
 
   async function signOut() {
-    await firebaseSignOut(firebaseAuth);
-    await resetRecaptchaVerifier();
-    setConfirmationResult(null);
-    setPendingPhone("");
+    clearSession();
     setUser(null);
     setProfile(null);
+    setPortal("");
   }
 
   const value = useMemo(
     () => ({
       user,
       profile,
+      portal,
       loading,
-      pendingPhone,
       isAuthenticated: Boolean(user?.id),
-      requestOtp,
-      verifyOtp,
-      completeProfile,
-      refreshProfile,
+      signInWithOtp,
+      updateSession,
       signOut,
     }),
-    [loading, pendingPhone, profile, user],
+    [loading, portal, profile, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -183,10 +160,8 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
   if (!context) {
     throw new Error("useAuth must be used inside AuthProvider.");
   }
-
   return context;
 }

@@ -1,16 +1,18 @@
 import { Home, LayoutGrid, Store, User, Sparkles } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function BottomNavigation() {
   const location = useLocation();
   const currentPath = location.pathname;
+  const { content } = useLanguage();
 
   const navItems = [
-    { path: "/", label: "Home", icon: Home },
-    { path: "/schemes", label: "Schemes", icon: LayoutGrid },
-    { path: "/chat", label: "Krishi AI", icon: Sparkles, isAi: true },
-    { path: "/mandi", label: "Market", icon: Store },
-    { path: "/profile", label: "Profile", icon: User },
+    { path: "/", label: content?.nav?.home ?? "Home", icon: Home },
+    { path: "/schemes", label: content?.dashboard?.modules?.[3]?.title ?? "Schemes", icon: LayoutGrid },
+    { path: "/chat", label: content?.nav?.chat ?? "Chat", icon: Sparkles, isAi: true },
+    { path: "/mandi", label: content?.nav?.mandi ?? "Mandi", icon: Store },
+    { path: "/profile", label: content?.nav?.profile ?? "Profile", icon: User },
   ];
 
   return (
