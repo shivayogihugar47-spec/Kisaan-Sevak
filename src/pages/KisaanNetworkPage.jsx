@@ -1,11 +1,7 @@
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  BellRing,
-  Heart,
-  MessageCircle,
-  Megaphone,
-  PlayCircle,
-  SendHorizontal,
-  Share2,
+  Heart, MessageCircle, Share2, X, Plus, Camera,
+  Edit2, Trash2, MoreVertical,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Button from "../components/Button";
@@ -18,632 +14,347 @@ import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
 
 export default function KisaanNetworkPage() {
-  const { content } = useLanguage();
-  const { profile } = useAuth();
-  const [customPosts, setCustomPosts] = useState([]);
+  const { language } = useLanguage();
+  const { user, profile } = useAuth();
+  const myUsername = user?.username;
+  const myName = profile?.name || user?.name || "Farmer";
+
+  // State
+  const [posts, setPosts] = useState([]);
   const [postStats, setPostStats] = useState({});
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentsByPost, setCommentsByPost] = useState({});
   const [commentDrafts, setCommentDrafts] = useState({});
   const [loadingCommentsPostId, setLoadingCommentsPostId] = useState(null);
   const [isLiking, setIsLiking] = useState({});
-  const [draft, setDraft] = useState("");
+  const [draftContent, setDraftContent] = useState("");
+  const [draftImage, setDraftImage] = useState(null);
+  const [draftImagePreview, setDraftImagePreview] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("discussions");
-  const [tutorialLanguage, setTutorialLanguage] = useState("All");
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editContent, setEditContent] = useState("");
+  const [showMenuForPost, setShowMenuForPost] = useState(null);
 
-  const tutorials = [
-    {
-      id: "yt-1",
-      title: "Drip Irrigation Full Guide (Hindi) - A to Z",
-      category: "Irrigation",
-      language: "Hindi",
-      duration: "60:06",
-      videoUrl: "https://www.youtube.com/watch?v=Vof1GmL2DAQ",
-    },
-    {
-      id: "yt-2",
-      title: "Soil Testing: How To Test Farm Soil",
-      category: "Soil Health",
-      language: "Marathi",
-      duration: "Tutorial",
-      videoUrl: "https://www.youtube.com/watch?v=Er-YlTegD2Y",
-    },
-    {
-      id: "yt-3",
-      title: "Integrated Pest Management (IPM) Course",
-      category: "Pest Management",
-      language: "English",
-      duration: "Series",
-      videoUrl: "https://www.youtube.com/watch?v=Zf19if__umQ",
-    },
-    {
-      id: "yt-4",
-      title: "Natural Farming Basics (Subhash Palekar)",
-      category: "Natural Farming",
-      language: "Hindi",
-      duration: "Tutorial",
-      videoUrl: "https://www.youtube.com/watch?v=KwM8jbjm4nM",
-    },
-    {
-      id: "yt-5",
-      title: "Jeevamrut Organic Fertilizer Preparation",
-      category: "Organic Fertilizer",
-      language: "Hindi",
-      duration: "06:12",
-      videoUrl: "https://www.youtube.com/watch?v=3zKq8riPxjg",
-    },
-    {
-      id: "yt-6",
-      title: "Mustard Crop Disease Diagnosis and Management",
-      category: "Disease Diagnosis",
-      language: "Hindi",
-      duration: "Tutorial",
-      videoUrl: "https://www.youtube.com/watch?v=jISwLnVYXuE",
-    },
-    {
-      id: "yt-7",
-      title: "Polyhouse Dutch Rose Farming Guide",
-      category: "Polyhouse",
-      language: "Kannada",
-      duration: "19:30",
-      videoUrl: "https://www.youtube.com/watch?v=fyLMa9D6lOc",
-    },
-    {
-      id: "yt-8",
-      title: "Guide to Polyhouse / Greenhouse Farming",
-      category: "Polyhouse",
-      language: "Kannada",
-      duration: "19:55",
-      videoUrl: "https://www.youtube.com/watch?v=uilUdFslBZY",
-    },
-    {
-      id: "yt-9",
-      title: "e-NAM Process Flow for Better Mandi Selling",
-      category: "Market Strategy",
-      language: "Hindi",
-      duration: "Tutorial",
-      videoUrl: "https://www.youtube.com/watch?v=lClh_FmFp_I",
-    },
-    {
-      id: "yt-10",
-      title: "Mandi Bhav App Usage for Price Planning",
-      category: "Market Strategy",
-      language: "Hindi",
-      duration: "Tutorial",
-      videoUrl: "https://www.youtube.com/watch?v=8SV9oyezo64",
-    },
-  ];
-  const tutorialLanguages = ["All", "Hindi", "Kannada", "Marathi", "English"];
+  // Helper: base64
+  const toBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+  });
 
+  // Format timestamp
+  const formatTime = (ts) => new Date(ts).toLocaleString();
+
+  // Load feed
   useEffect(() => {
-    fetchPostsAndStats();
-  }, []);
+    if (!myUsername) return;
+    fetchFeed();
+  }, [myUsername]);
 
-  const fetchPostsAndStats = async () => {
+  const fetchFeed = async () => {
     setIsLoading(true);
     try {
-      const { data: postsData, error: postsError } = await supabase
+      const { data, error } = await supabase
         .from("community_posts")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(20);
-
-      if (postsError) throw postsError;
-
-      if (postsData && postsData.length > 0) {
-        const formattedData = postsData.map((post) => ({
-          id: post.id,
-          categoryKey: post.category_key || "farmer",
-          author: post.author || "Unknown",
-          authorPhone: post.author_phone || "",
-          message: post.content,
-          createdAt: post.created_at,
-        }));
-        setCustomPosts(formattedData);
-
-        const postIds = formattedData.map((p) => p.id);
-        const [{ data: likesData, error: likesError }, { data: commentsData, error: commentsError }] =
-          await Promise.all([
-            supabase
-              .from("community_post_likes")
-              .select("post_id,user_phone")
-              .in("post_id", postIds),
-            supabase
-              .from("community_post_comments")
-              .select("post_id")
-              .in("post_id", postIds),
-          ]);
-
-        if (likesError) throw likesError;
-        if (commentsError) throw commentsError;
-
-        const likesByPost = {};
-        const commentsByPostCount = {};
-        const myPhone = String(profile?.phone || "");
-
-        (likesData || []).forEach((row) => {
-          if (!likesByPost[row.post_id]) likesByPost[row.post_id] = { likeCount: 0, likedByMe: false };
-          likesByPost[row.post_id].likeCount += 1;
-          if (myPhone && row.user_phone === myPhone) likesByPost[row.post_id].likedByMe = true;
-        });
-
-        (commentsData || []).forEach((row) => {
-          commentsByPostCount[row.post_id] = (commentsByPostCount[row.post_id] || 0) + 1;
-        });
-
-        const nextStats = {};
-        postIds.forEach((postId) => {
-          nextStats[postId] = {
-            likeCount: likesByPost[postId]?.likeCount || 0,
-            commentCount: commentsByPostCount[postId] || 0,
-            likedByMe: Boolean(likesByPost[postId]?.likedByMe),
+        .limit(50);
+      if (error) throw error;
+      setPosts(data || []);
+      const postIds = (data || []).map(p => p.id);
+      if (postIds.length) {
+        const [{ data: likes }, { data: comments }] = await Promise.all([
+          supabase.from("community_post_likes").select("*").in("post_id", postIds),
+          supabase.from("community_post_comments").select("post_id").in("post_id", postIds),
+        ]);
+        const stats = {};
+        postIds.forEach(pid => {
+          stats[pid] = {
+            likeCount: likes?.filter(l => l.post_id === pid).length || 0,
+            likedByMe: likes?.some(l => l.post_id === pid && l.user_username === myUsername),
+            commentCount: comments?.filter(c => c.post_id === pid).length || 0,
           };
         });
-        setPostStats(nextStats);
-      } else {
-        setCustomPosts([]);
-        setPostStats({});
+        setPostStats(stats);
       }
-    } catch (error) {
-      console.error("Error fetching posts:", error);
-      setCustomPosts([]);
-      setPostStats({});
-    } finally {
-      setIsLoading(false);
+    } catch (err) { console.error(err); }
+    finally { setIsLoading(false); }
+  };
+
+  // Create post
+  const handleCreatePost = async () => {
+    if (!draftContent.trim() && !draftImage) return;
+    let imageUrl = null;
+    if (draftImage) imageUrl = await toBase64(draftImage);
+    const { data, error } = await supabase
+      .from("community_posts")
+      .insert([{
+        author: myName,
+        author_username: myUsername,
+        content: draftContent,
+        image_url: imageUrl,
+        category_key: "farmer",
+      }])
+      .select();
+    if (!error && data) {
+      setPosts([data[0], ...posts]);
+      setPostStats(prev => ({ ...prev, [data[0].id]: { likeCount: 0, likedByMe: false, commentCount: 0 } }));
+    }
+    setDraftContent("");
+    setDraftImage(null);
+    setDraftImagePreview("");
+  };
+
+  // Edit post
+  const startEditPost = (post) => {
+    setEditingPostId(post.id);
+    setEditContent(post.content);
+    setShowMenuForPost(null);
+  };
+  const cancelEdit = () => {
+    setEditingPostId(null);
+    setEditContent("");
+  };
+  const saveEdit = async (postId) => {
+    if (!editContent.trim()) return;
+    const { error } = await supabase
+      .from("community_posts")
+      .update({ content: editContent })
+      .eq("id", postId);
+    if (!error) {
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, content: editContent } : p));
+      setEditingPostId(null);
+      setEditContent("");
     }
   };
 
-  const toEmbedUrl = (videoUrl) => {
-    if (!videoUrl) return "";
-    try {
-      const parsed = new URL(videoUrl);
-      if (parsed.hostname.includes("youtu.be")) {
-        const id = parsed.pathname.replace("/", "");
-        return id ? `https://www.youtube.com/embed/${id}` : "";
-      }
-      const v = parsed.searchParams.get("v");
-      if (v) return `https://www.youtube.com/embed/${v}`;
-      return "";
-    } catch {
-      return "";
+  // Delete post
+  const deletePost = async (postId) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    const { error } = await supabase
+      .from("community_posts")
+      .delete()
+      .eq("id", postId);
+    if (!error) {
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      setShowMenuForPost(null);
     }
   };
 
-  const formatTime = (createdAt) => {
-    if (!createdAt) return "";
-    const date = new Date(createdAt);
-    if (Number.isNaN(date.getTime())) return "";
-    return date.toLocaleString([], {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const fetchCommentsForPost = async (postId) => {
-    if (!postId) return;
-    setLoadingCommentsPostId(postId);
-    try {
-      const { data, error } = await supabase
-        .from("community_post_comments")
-        .select("id,post_id,author,comment,created_at")
+  // Like / Unlike
+  const toggleLike = async (postId) => {
+    if (!myUsername) return;
+    const liked = postStats[postId]?.likedByMe;
+    setIsLiking(prev => ({ ...prev, [postId]: true }));
+    if (liked) {
+      await supabase
+        .from("community_post_likes")
+        .delete()
         .eq("post_id", postId)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-
-      setCommentsByPost((current) => ({ ...current, [postId]: data || [] }));
-    } catch (error) {
-      console.error("Error fetching comments:", error);
-      setCommentsByPost((current) => ({ ...current, [postId]: [] }));
-    } finally {
-      setLoadingCommentsPostId(null);
+        .eq("user_username", myUsername);
+    } else {
+      await supabase
+        .from("community_post_likes")
+        .insert({ post_id: postId, user_username: myUsername, user_name: myName });
     }
-  };
-
-  const handleToggleComments = async (postId) => {
-    if (activeCommentPostId === postId) {
-      setActiveCommentPostId(null);
-      return;
-    }
-    setActiveCommentPostId(postId);
-    await fetchCommentsForPost(postId);
-  };
-
-  const handleAddComment = async (postId) => {
-    const comment = String(commentDrafts[postId] || "").trim();
-    if (!comment) return;
-    const author = String(profile?.name || content.network?.you || "You");
-    const authorPhone = String(profile?.phone || "");
-
-    try {
-      const { error } = await supabase.from("community_post_comments").insert([
-        {
-          post_id: postId,
-          author,
-          author_phone: authorPhone || null,
-          comment,
-        },
-      ]);
-      if (error) throw error;
-      setCommentDrafts((current) => ({ ...current, [postId]: "" }));
-      await fetchCommentsForPost(postId);
-      setPostStats((current) => ({
-        ...current,
-        [postId]: {
-          ...(current[postId] || {}),
-          commentCount: (current[postId]?.commentCount || 0) + 1,
-        },
-      }));
-    } catch (error) {
-      console.error("Error adding comment:", error);
-    }
-  };
-
-  const handleToggleLike = async (postId) => {
-    const userPhone = String(profile?.phone || "");
-    if (!userPhone) return;
-    setIsLiking((current) => ({ ...current, [postId]: true }));
-    try {
-      const isLiked = Boolean(postStats[postId]?.likedByMe);
-      if (isLiked) {
-        const { error } = await supabase
-          .from("community_post_likes")
-          .delete()
-          .eq("post_id", postId)
-          .eq("user_phone", userPhone);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("community_post_likes").insert([
-          {
-            post_id: postId,
-            user_phone: userPhone,
-            user_name: String(profile?.name || "User"),
-          },
-        ]);
-        if (error) throw error;
+    setPostStats(prev => ({
+      ...prev,
+      [postId]: {
+        ...prev[postId],
+        likedByMe: !liked,
+        likeCount: prev[postId].likeCount + (liked ? -1 : 1)
       }
+    }));
+    setIsLiking(prev => ({ ...prev, [postId]: false }));
+  };
 
-      setPostStats((current) => {
-        const prev = current[postId] || { likeCount: 0, commentCount: 0, likedByMe: false };
-        const nextLiked = !prev.likedByMe;
-        return {
-          ...current,
-          [postId]: {
-            ...prev,
-            likedByMe: nextLiked,
-            likeCount: Math.max(0, prev.likeCount + (nextLiked ? 1 : -1)),
-          },
-        };
+  // Comments
+  const fetchComments = async (postId) => {
+    setLoadingCommentsPostId(postId);
+    const { data } = await supabase
+      .from("community_post_comments")
+      .select("*")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true });
+    setCommentsByPost(prev => ({ ...prev, [postId]: data || [] }));
+    setLoadingCommentsPostId(null);
+  };
+
+  const addComment = async (postId) => {
+    const text = commentDrafts[postId]?.trim();
+    if (!text) return;
+    await supabase
+      .from("community_post_comments")
+      .insert({
+        post_id: postId,
+        author: myName,
+        author_username: myUsername,
+        comment: text,
       });
-    } catch (error) {
-      console.error("Error toggling like:", error);
-    } finally {
-      setIsLiking((current) => ({ ...current, [postId]: false }));
-    }
+    setCommentDrafts(prev => ({ ...prev, [postId]: "" }));
+    await fetchComments(postId);
+    setPostStats(prev => ({
+      ...prev,
+      [postId]: { ...prev[postId], commentCount: prev[postId].commentCount + 1 }
+    }));
   };
 
-  const handleShare = async (post) => {
-    const shareText = `${post.message}\n\nfrom Kisaan Network`;
-    try {
-      if (navigator?.share) {
-        await navigator.share({ title: "Kisaan Network", text: shareText });
-        return;
-      }
-      await navigator.clipboard.writeText(shareText);
-    } catch (error) {
-      console.error("Share failed:", error);
-    }
+  // Share post (copy link)
+  const sharePost = (post) => {
+    const text = `${post.content}\n\n— Posted on Kisaan Network`;
+    navigator.clipboard.writeText(text);
+    alert("Post copied to clipboard!");
   };
 
-  const posts = customPosts;
-  const visibleTutorials =
-    tutorialLanguage === "All"
-      ? tutorials
-      : tutorials.filter((video) => video.language === tutorialLanguage);
-
-  const handleBroadcast = async () => {
-    if (!draft.trim()) return;
-
-    const newPost = {
-      category_key: "farmer",
-      author: content.network?.you || "You",
-      content: draft.trim(),
-    };
-
-    try {
-      const { data, error } = await supabase.from("community_posts").insert([newPost]).select();
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        setCustomPosts((current) => [
-          {
-            id: data[0].id,
-            categoryKey: data[0].category_key || "farmer",
-            author: data[0].author || newPost.author,
-            authorPhone: data[0].author_phone || "",
-            message: data[0].content || newPost.content,
-            createdAt: data[0].created_at || new Date().toISOString(),
-          },
-          ...current,
-        ]);
-        setPostStats((current) => ({
-          ...current,
-          [data[0].id]: { likeCount: 0, commentCount: 0, likedByMe: false },
-        }));
-      } else {
-        setCustomPosts((current) => [
-          {
-            id: crypto.randomUUID(),
-            categoryKey: newPost.category_key,
-            author: newPost.author,
-            authorPhone: "",
-            message: newPost.content,
-            createdAt: new Date().toISOString(),
-          },
-          ...current,
-        ]);
-      }
-    } catch (error) {
-      console.error("Error inserting post:", error);
-      setCustomPosts((current) => [
-        {
-          id: crypto.randomUUID(),
-          categoryKey: "farmer",
-          author: content.network?.you || "You",
-          authorPhone: "",
-          message: draft.trim(),
-          createdAt: new Date().toISOString(),
-        },
-        ...current,
-      ]);
-    }
-
-    setDraft("");
-  };
+  if (!myUsername) {
+    return <div className="flex items-center justify-center h-screen">Please log in to continue</div>;
+  }
 
   return (
-    <PageWrapper className="bg-leaf-50">
-      <Header
-        title={content.network?.title || "Kisaan Network"}
-        subtitle={content.network?.subtitle || "Share alerts with nearby farmers"}
-        location={content.locationLabel}
-        showBack
-        maxWidth="max-w-4xl"
-      />
+    <PageWrapper className="bg-gradient-to-br from-amber-50 via-white to-emerald-50">
+      <Header title="Kisaan Network" subtitle="Share farming tips & ask questions" location={profile?.district} showBack maxWidth="max-w-4xl" />
 
-      <div className="mx-auto max-w-4xl px-5 pb-12">
-        <button
-          type="button"
-          onClick={() => setActiveTab("discussions")}
-          className={`rounded-xl px-4 py-2 text-sm font-bold ${
-            activeTab === "discussions"
-              ? "bg-slate-900 text-white"
-              : "border border-slate-300 bg-white text-slate-700"
-          }`}
-        >
-          Discussions
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("tutorials")}
-          className={`rounded-xl px-4 py-2 text-sm font-bold ${
-            activeTab === "tutorials"
-              ? "bg-slate-900 text-white"
-              : "border border-slate-300 bg-white text-slate-700"
-          }`}
-        >
-          Tutorials
-        </button>
-      </div>
-
-      {activeTab === "discussions" ? (
-        <>
-          <Card className="rounded-2xl border border-slate-200 bg-white shadow-none">
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">
-                {content.network?.postLabel || "Create a Post"}
-              </span>
-              <textarea
-                rows="3"
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder={content.network?.placeholder || "Share your thoughts..."}
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-slate-500 focus:bg-white"
+      <div className="mx-auto max-w-4xl px-4 py-6">
+        {/* Create post card */}
+        <Card className="rounded-2xl border border-emerald-100 bg-white shadow-md p-4 mb-6">
+          <textarea
+            rows="3"
+            value={draftContent}
+            onChange={e => setDraftContent(e.target.value)}
+            placeholder="Share a farming tip, ask a question, or post a photo..."
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-emerald-400"
+          />
+          {draftImagePreview && (
+            <div className="relative mt-2 inline-block">
+              <img src={draftImagePreview} alt="preview" className="h-24 w-24 rounded-lg object-cover" />
+              <button
+                onClick={() => { setDraftImage(null); setDraftImagePreview(""); }}
+                className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+          <div className="flex justify-between items-center mt-3">
+            <label className="cursor-pointer rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-emerald-100">
+              <Camera size={20} />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  if (e.target.files[0]) {
+                    setDraftImage(e.target.files[0]);
+                    setDraftImagePreview(URL.createObjectURL(e.target.files[0]));
+                  }
+                }}
               />
             </label>
-            <Button className="mt-3 w-full bg-slate-900 hover:bg-slate-800" onClick={handleBroadcast}>
-              <Megaphone size={18} />
-              {content.network?.broadcast || "Broadcast to Network"}
-            </Button>
-          </Card>
-
-          <section className="mt-6">
-            <div className="mb-3 flex items-center gap-2 text-slate-700">
-              <BellRing size={18} />
-              <h2 className="font-display text-lg font-bold">
-                {content.network?.alertsTitle || "Recent Posts"}
-              </h2>
-            </div>
-
-            {isLoading ? (
-              <Card>
-                <p className="text-sm font-semibold text-leaf-600">Loading posts...</p>
-              </Card>
-            ) : posts.length ? (
-              <div className="space-y-3">
-                {posts.map((post) => (
-                  <Card key={post.id} className="rounded-2xl border border-slate-200 bg-white p-0 shadow-sm">
-                    <article className="p-4">
-                      <div className="mb-3 flex items-center justify-between">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-soil-500 to-leaf-600 text-xs font-black text-white">
-                            {String(post.author || "U").trim().slice(0, 1).toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-slate-800">{post.author}</p>
-                            <p className="text-[11px] font-semibold text-slate-500">{formatTime(post.createdAt)}</p>
-                          </div>
-                        </div>
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                          {content.network?.categories?.[post.categoryKey] || post.categoryKey}
-                        </span>
-                      </div>
-
-                      <p className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">{post.message}</p>
-
-                      <div className="mt-3 flex items-center gap-3 border-y border-slate-100 py-2 text-slate-700">
-                        <button
-                          type="button"
-                          disabled={Boolean(isLiking[post.id])}
-                          onClick={() => handleToggleLike(post.id)}
-                          className={`inline-flex items-center gap-1 text-sm font-semibold ${
-                            postStats[post.id]?.likedByMe ? "text-red-500" : "text-slate-700"
-                          }`}
-                        >
-                          <Heart
-                            size={18}
-                            fill={postStats[post.id]?.likedByMe ? "currentColor" : "none"}
-                            className="transition"
-                          />
-                          Like
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleComments(post.id)}
-                          className="inline-flex items-center gap-1 text-sm font-semibold text-slate-700"
-                        >
-                          <MessageCircle size={18} />
-                          Comment
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleShare(post)}
-                          className="ml-auto inline-flex items-center gap-1 text-sm font-semibold text-slate-700"
-                        >
-                          <SendHorizontal size={17} />
-                          Share
-                        </button>
-                      </div>
-
-                      <div className="mt-2 flex items-center gap-4 text-xs font-semibold text-slate-600">
-                        <span>{postStats[post.id]?.likeCount || 0} likes</span>
-                        <button type="button" onClick={() => handleToggleComments(post.id)} className="hover:underline">
-                          View {postStats[post.id]?.commentCount || 0} comments
-                        </button>
-                      </div>
-
-                      {activeCommentPostId === post.id ? (
-                        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                          <div className="space-y-2">
-                            {(commentsByPost[post.id] || []).map((item) => (
-                              <div key={item.id} className="rounded-lg bg-white px-3 py-2">
-                                <p className="text-xs font-semibold text-slate-500">
-                                  {item.author} • {formatTime(item.created_at)}
-                                </p>
-                                <p className="mt-1 text-sm text-slate-800">{item.comment}</p>
-                              </div>
-                            ))}
-                            {loadingCommentsPostId === post.id ? (
-                              <p className="text-xs font-semibold text-slate-500">Loading comments...</p>
-                            ) : null}
-                            {!loadingCommentsPostId && (commentsByPost[post.id] || []).length === 0 ? (
-                              <p className="text-xs font-semibold text-slate-500">
-                                No comments yet. Start the discussion.
-                              </p>
-                            ) : null}
-                          </div>
-                          <div className="mt-3 flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={commentDrafts[post.id] || ""}
-                              onChange={(event) =>
-                                setCommentDrafts((current) => ({
-                                  ...current,
-                                  [post.id]: event.target.value,
-                                }))
-                              }
-                              placeholder="Add a comment..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-slate-500"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleAddComment(post.id)}
-                              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"
-                            >
-                              Post
-                            </button>
-                          </div>
-                        </div>
-                      ) : null}
-                    </article>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon="📣"
-                title={content.network?.emptyTitle || "No posts yet"}
-                description={
-                  content.network?.emptyDescription ||
-                  "Be the first one to post in your nearby farmer network."
-                }
-              />
-            )}
-          </section>
-        </>
-      ) : (
-        <section className="space-y-3">
-          <div className="mb-2 flex gap-2 overflow-x-auto no-scrollbar">
-            {tutorialLanguages.map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                onClick={() => setTutorialLanguage(lang)}
-                className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                  tutorialLanguage === lang
-                    ? "bg-slate-900 text-white"
-                    : "border border-slate-300 bg-white text-slate-700"
-                }`}
-              >
-                {lang}
-              </button>
-            ))}
+            <Button onClick={handleCreatePost} className="bg-emerald-700 hover:bg-emerald-800 px-6">Post</Button>
           </div>
-          {visibleTutorials.map((video) => (
-            <Card key={video.id}>
-              <a href={video.videoUrl} target="_blank" rel="noreferrer" className="block">
-                <div className="relative mb-3 h-[160px] w-full overflow-hidden rounded-2xl bg-slate-900">
-                  {toEmbedUrl(video.videoUrl) ? (
-                    <iframe
-                      className="h-full w-full"
-                      src={toEmbedUrl(video.videoUrl)}
-                      title={video.title}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
+        </Card>
+
+        {/* Feed posts */}
+        <div className="space-y-4">
+          {isLoading && <p className="text-center text-slate-500">Loading posts...</p>}
+          {!isLoading && posts.length === 0 && <EmptyState icon="📭" title="No posts yet" description="Be the first to share something!" />}
+          {posts.map(post => {
+            const isMyPost = post.author_username === myUsername;
+            return (
+              <motion.div key={post.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-md border border-emerald-50 overflow-hidden">
+                <div className="p-4">
+                  {/* Header with menu */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-600 to-amber-600 flex items-center justify-center text-white font-bold uppercase">
+                        {post.author?.charAt(0) || "F"}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-800">{post.author}</p>
+                        <p className="text-xs text-slate-400">{formatTime(post.created_at)}</p>
+                      </div>
+                    </div>
+                    {isMyPost && (
+                      <div className="relative">
+                        <button onClick={() => setShowMenuForPost(showMenuForPost === post.id ? null : post.id)} className="p-1 rounded-full hover:bg-slate-100">
+                          <MoreVertical size={18} className="text-slate-500" />
+                        </button>
+                        {showMenuForPost === post.id && (
+                          <div className="absolute right-0 mt-1 bg-white rounded-lg shadow-lg border z-10 w-32">
+                            <button onClick={() => startEditPost(post)} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"><Edit2 size={14} /> Edit</button>
+                            <button onClick={() => deletePost(post.id)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"><Trash2 size={14} /> Delete</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  {editingPostId === post.id ? (
+                    <div className="mt-2">
+                      <textarea
+                        value={editContent}
+                        onChange={e => setEditContent(e.target.value)}
+                        className="w-full border rounded-lg p-2 text-sm"
+                        rows="3"
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <button onClick={cancelEdit} className="px-3 py-1 bg-slate-200 rounded text-sm">Cancel</button>
+                        <button onClick={() => saveEdit(post.id)} className="px-3 py-1 bg-emerald-600 text-white rounded text-sm">Save</button>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="flex h-full items-center justify-center text-white">
-                      Open tutorial on YouTube
+                    <>
+                      <p className="text-slate-700 whitespace-pre-wrap">{post.content}</p>
+                      {post.image_url && (
+                        <div className="mt-3 rounded-xl overflow-hidden">
+                          <img src={post.image_url} alt="post" className="max-h-80 w-full object-cover" />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-4 mt-4 text-slate-600">
+                    <button onClick={() => toggleLike(post.id)} disabled={isLiking[post.id]} className={`flex items-center gap-1 ${postStats[post.id]?.likedByMe ? "text-red-500" : ""}`}>
+                      <Heart size={18} fill={postStats[post.id]?.likedByMe ? "currentColor" : "none"} /> Like ({postStats[post.id]?.likeCount || 0})
+                    </button>
+                    <button onClick={() => { if (activeCommentPostId !== post.id) fetchComments(post.id); setActiveCommentPostId(activeCommentPostId === post.id ? null : post.id); }} className="flex items-center gap-1">
+                      <MessageCircle size={18} /> Comment ({postStats[post.id]?.commentCount || 0})
+                    </button>
+                    <button onClick={() => sharePost(post)} className="flex items-center gap-1">
+                      <Share2 size={18} /> Share
+                    </button>
+                  </div>
+
+                  {/* Comments section */}
+                  {activeCommentPostId === post.id && (
+                    <div className="mt-4 border-t pt-3">
+                      {loadingCommentsPostId === post.id && <p className="text-sm text-slate-500">Loading comments...</p>}
+                      {commentsByPost[post.id]?.map(c => (
+                        <div key={c.id} className="bg-slate-50 rounded-lg p-2 mb-2">
+                          <p className="text-xs font-bold text-slate-600">{c.author} • {formatTime(c.created_at)}</p>
+                          <p className="text-sm">{c.comment}</p>
+                        </div>
+                      ))}
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          value={commentDrafts[post.id] || ""}
+                          onChange={e => setCommentDrafts(prev => ({ ...prev, [post.id]: e.target.value }))}
+                          placeholder="Write a comment..."
+                          className="flex-1 rounded-lg border p-2 text-sm"
+                        />
+                        <button onClick={() => addComment(post.id)} className="bg-emerald-700 text-white px-3 rounded-lg text-sm">Post</button>
+                      </div>
                     </div>
                   )}
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wide text-soil-700">{video.category}</span>
-                <h3 className="mt-1 text-base font-bold text-leaf-800">{video.title}</h3>
-                <p className="mt-1 text-xs font-semibold text-leaf-500">
-                  {video.duration} • {video.language} • YouTube
-                </p>
-                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-leaf-100 bg-leaf-50 px-3 py-1.5 text-xs font-semibold text-leaf-700">
-                  <PlayCircle size={14} />
-                  Watch on YouTube
-                </div>
-              </a>
-            </Card>
-          ))}
-        </section>
-      )}
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
     </PageWrapper>
   );
 }

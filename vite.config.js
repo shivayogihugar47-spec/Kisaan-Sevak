@@ -7,15 +7,21 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    server: proxyTarget
-      ? {
-          proxy: {
-            "/api": {
-              target: proxyTarget,
-              changeOrigin: true,
-            },
-          },
-        }
-      : undefined,
+    server: {
+      proxy: {
+        // Your existing OTP API proxy
+        "/api": proxyTarget ? {
+          target: proxyTarget,
+          changeOrigin: true,
+        } : undefined,
+
+        // NEW: NVIDIA AI Proxy to bypass CORS
+        "/nvidia-api": {
+          target: "https://integrate.api.nvidia.com",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/nvidia-api/, ""),
+        },
+      },
+    },
   };
 });

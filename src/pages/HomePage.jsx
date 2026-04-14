@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { ArrowRight, Leaf, Store } from "lucide-react";
-import { supabase } from "../lib/supabase";
-import { normalizePhoneInput } from "../lib/auth";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
-
-const RESEND_COOLDOWN_SECONDS = 45;
 
 const COPY = {
   en: {
@@ -22,37 +18,31 @@ const COPY = {
     usernameLabel: "USERNAME *",
     usernamePlaceholder: "Choose a username",
     passwordLabel: "PASSWORD *",
-    passwordPlaceholder: "Create a password",
-    phoneLabel: "PHONE NUMBER",
-    phonePlaceholder: "Enter your phone number",
-    otpLabel: "PASSWORD / OTP",
-    otpPlaceholder: "Enter OTP",
+    passwordPlaceholder: "Enter password",
+    nameLabel: "FULL NAME *",
+    namePlaceholder: "Enter your full name",
+    confirmPasswordLabel: "CONFIRM PASSWORD *",
+    confirmPasswordPlaceholder: "Confirm your password",
     processing: "Processing...",
-    verifyOtp: "Verify OTP",
     secureLogin: "Secure Login",
-    sending: "Sending...",
-    sendOtp: "Send OTP",
-    changeNumber: "Change number",
-    resendOtp: "Resend OTP",
-    resendOtpWithCountdown: "Resend OTP ({s}s)",
-    otpResent: "OTP resent.",
-    otpSent: "OTP sent.",
-    rateLimit: "Too many attempts. Please wait a moment and try again.",
-    errValidPhone: "Please enter a valid 10-digit phone number.",
+    signIn: "Sign In",
+    signUp: "Sign Up",
     errCompleteRequired: "Please complete the required fields.",
-    errFailedSendOtp: "Failed to send OTP.",
-    errOtp6Digits: "OTP must be 6 digits.",
-    errOtpVerifyFailed: "OTP verification failed.",
-    errUnableCheckAccount: "Unable to check account.",
-    errCreateAccount: "Unable to create account.",
-    errVerifyOtp: "Unable to verify OTP.",
-    accountExistsSignIn: "Account already exists, please Sign in.",
-    accountNotFoundSignUp: "Account not found, please Sign up.",
+    errPasswordMatch: "Passwords do not match.",
+    errPasswordMin: "Password must be at least 6 characters.",
+    errInvalidCredentials: "Invalid username or password.",
+    errUsernameExists: "Username already exists.",
+    errSignInFailed: "Sign in failed. Please try again.",
+    errSignUpFailed: "Sign up failed. Please try again.",
     signup: {
       usernameRequired: "Username is required.",
-      phoneRequired: "Phone number is required.",
+      nameRequired: "Full name is required.",
       passwordRequired: "Password is required.",
       passwordMin: "Password must be at least 6 characters.",
+    },
+    signin: {
+      usernameRequired: "Username is required.",
+      passwordRequired: "Password is required.",
     },
   },
   hi: {
@@ -61,90 +51,78 @@ const COPY = {
     portalFarmer: "किसान",
     portalFarmerSubtitle: "डिफ़ॉल्ट",
     portalBuyer: "खरीदार",
-    portalBuyerSubtitle: "एंटरप्राइज़",
+    portalBuyerSubtitle: "एंटरप्राइज",
     modeSignIn: "साइन इन",
     modeSignUp: "साइन अप",
-    createAccountTitle: "किसान सेवक – अकाउंट बनाएँ",
-    usernameLabel: "यूज़रनेम *",
-    usernamePlaceholder: "यूज़रनेम चुनें",
+    createAccountTitle: "किसान सेवक – खाता बनाएं",
+    usernameLabel: "उपयोगकर्ता नाम *",
+    usernamePlaceholder: "उपयोगकर्ता नाम चुनें",
     passwordLabel: "पासवर्ड *",
-    passwordPlaceholder: "पासवर्ड बनाएँ",
-    phoneLabel: "फोन नंबर",
-    phonePlaceholder: "अपना फोन नंबर दर्ज करें",
-    otpLabel: "पासवर्ड / ओटीपी",
-    otpPlaceholder: "ओटीपी दर्ज करें",
-    processing: "प्रोसेस हो रहा है...",
-    verifyOtp: "ओटीपी सत्यापित करें",
-    secureLogin: "सिक्योर लॉगिन",
-    sending: "भेज रहे हैं...",
-    sendOtp: "ओटीपी भेजें",
-    changeNumber: "नंबर बदलें",
-    resendOtp: "ओटीपी फिर से भेजें",
-    resendOtpWithCountdown: "ओटीपी फिर से भेजें ({s}s)",
-    otpResent: "ओटीपी फिर से भेजा गया।",
-    otpSent: "ओटीपी भेजा गया।",
-    rateLimit: "बहुत ज्यादा प्रयास। कृपया थोड़ी देर बाद फिर कोशिश करें।",
-    errValidPhone: "कृपया 10 अंकों का सही फोन नंबर दर्ज करें।",
-    errCompleteRequired: "कृपया आवश्यक जानकारी भरें।",
-    errFailedSendOtp: "ओटीपी भेजने में असफल।",
-    errOtp6Digits: "ओटीपी 6 अंकों का होना चाहिए।",
-    errOtpVerifyFailed: "ओटीपी सत्यापन असफल।",
-    errUnableCheckAccount: "अकाउंट चेक नहीं हो पाया।",
-    errCreateAccount: "अकाउंट बन नहीं पाया।",
-    errVerifyOtp: "ओटीपी सत्यापित नहीं हो पाया।",
-    accountExistsSignIn: "अकाउंट पहले से है, कृपया साइन इन करें।",
-    accountNotFoundSignUp: "अकाउंट नहीं मिला, कृपया साइन अप करें।",
+    passwordPlaceholder: "पासवर्ड दर्ज करें",
+    nameLabel: "पूरा नाम *",
+    namePlaceholder: "अपना पूरा नाम दर्ज करें",
+    confirmPasswordLabel: "पासवर्ड की पुष्टि करें *",
+    confirmPasswordPlaceholder: "पासवर्ड की पुष्टि करें",
+    processing: "प्रसंस्करण हो रहा है...",
+    secureLogin: "सुरक्षित लॉगिन",
+    signIn: "साइन इन",
+    signUp: "साइन अप",
+    errCompleteRequired: "कृपया आवश्यक फ़ील्ड भरें।",
+    errPasswordMatch: "पासवर्ड मेल नहीं खाते।",
+    errPasswordMin: "पासवर्ड कम से कम 6 वर्णों का होना चाहिए।",
+    errInvalidCredentials: "अमान्य उपयोगकर्ता नाम या पासवर्ड।",
+    errUsernameExists: "उपयोगकर्ता नाम पहले से मौजूद है।",
+    errSignInFailed: "साइन इन विफल रहा। कृपया पुनः प्रयास करें।",
+    errSignUpFailed: "साइन अप विफल रहा। कृपया पुनः प्रयास करें।",
     signup: {
-      usernameRequired: "यूज़रनेम आवश्यक है।",
-      phoneRequired: "फोन नंबर आवश्यक है।",
+      usernameRequired: "उपयोगकर्ता नाम आवश्यक है।",
+      nameRequired: "पूरा नाम आवश्यक है।",
       passwordRequired: "पासवर्ड आवश्यक है।",
-      passwordMin: "पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।",
+      passwordMin: "पासवर्ड कम से कम 6 वर्णों का होना चाहिए।",
+    },
+    signin: {
+      usernameRequired: "उपयोगकर्ता नाम आवश्यक है।",
+      passwordRequired: "पासवर्ड आवश्यक है।",
     },
   },
   kn: {
-    preparingSecurePortal: "ಸುರಕ್ಷಿತ ಪೋರ್ಟಲ್ ಸಿದ್ಧವಾಗುತ್ತಿದೆ...",
-    headerSubtitle: "ಮುಂದುವರಿಸಲು ನಿಮ್ಮ ಪೋರ್ಟಲ್ ಆಯ್ಕೆ ಮಾಡಿ",
+    preparingSecurePortal: "ನಿರಾಪದ ಪೋರ್ಟಲ್ ಸಿದ್ಧಾರಿಸಲಾಗುತ್ತಿದೆ...",
+    headerSubtitle: "ಮುಂದುವರೆಯಲು ನಿಮ್ಮ ಪೋರ್ಟಲ್ ಅನ್ನು ಆಯ್ಕೆ ಮಾಡಿ",
     portalFarmer: "ರೈತ",
-    portalFarmerSubtitle: "ಡೀಫಾಲ್ಟ್",
-    portalBuyer: "ಖರೀದಿದಾರ",
-    portalBuyerSubtitle: "ಎಂಟರ್ಪ್ರೈಸ್",
+    portalFarmerSubtitle: "ಡಿಫಾಲ್ಟ್",
+    portalBuyer: "ಖರೀದುದಾರ",
+    portalBuyerSubtitle: "ಎಂಟರ್‌ಪ್ರೈಸ್",
     modeSignIn: "ಸೈನ್ ಇನ್",
     modeSignUp: "ಸೈನ್ ಅಪ್",
-    createAccountTitle: "ಕಿಸಾನ್ ಸೇವಕ್ – ಖಾತೆ ರಚಿಸಿ",
+    createAccountTitle: "ಕಿಸಾನ್ ಸೇವಕ – ಖಾತೆ ರಚಿಸಿ",
     usernameLabel: "ಬಳಕೆದಾರ ಹೆಸರು *",
-    usernamePlaceholder: "ಬಳಕೆದಾರ ಹೆಸರು ಆಯ್ಕೆ ಮಾಡಿ",
+    usernamePlaceholder: "ಬಳಕೆದಾರ ಹೆಸರು ಆರಿಸಿ",
     passwordLabel: "ಪಾಸ್‌ವರ್ಡ್ *",
-    passwordPlaceholder: "ಪಾಸ್‌ವರ್ಡ್ ರಚಿಸಿ",
-    phoneLabel: "ಫೋನ್ ಸಂಖ್ಯೆ",
-    phonePlaceholder: "ನಿಮ್ಮ ಫೋನ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ",
-    otpLabel: "ಪಾಸ್‌ವರ್ಡ್ / ಒಟಿಪಿ",
-    otpPlaceholder: "ಒಟಿಪಿ ನಮೂದಿಸಿ",
-    processing: "ಪ್ರಕ್ರಿಯೆ ನಡೆಯುತ್ತಿದೆ...",
-    verifyOtp: "ಒಟಿಪಿ ಪರಿಶೀಲಿಸಿ",
-    secureLogin: "ಸಿಕ್ಯೋರ್ ಲಾಗಿನ್",
-    sending: "ಕಳುಹಿಸುತ್ತಿದೆ...",
-    sendOtp: "ಒಟಿಪಿ ಕಳುಹಿಸಿ",
-    changeNumber: "ಸಂಖ್ಯೆ ಬದಲಾಯಿಸಿ",
-    resendOtp: "ಒಟಿಪಿ ಮರುಕಳುಹಿಸಿ",
-    resendOtpWithCountdown: "ಒಟಿಪಿ ಮರುಕಳುಹಿಸಿ ({s}s)",
-    otpResent: "ಒಟಿಪಿ ಮರುಕಳುಹಿಸಲಾಗಿದೆ.",
-    otpSent: "ಒಟಿಪಿ ಕಳುಹಿಸಲಾಗಿದೆ.",
-    rateLimit: "ಬಹಳಷ್ಟು ಪ್ರಯತ್ನಗಳು. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಹೊತ್ತಿನ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
-    errValidPhone: "ದಯವಿಟ್ಟು ಸರಿಯಾದ 10 ಅಂಕಿಯ ಫೋನ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ.",
-    errCompleteRequired: "ದಯವಿಟ್ಟು ಅಗತ್ಯವಿರುವ ಮಾಹಿತಿಯನ್ನು ತುಂಬಿ.",
-    errFailedSendOtp: "ಒಟಿಪಿ ಕಳುಹಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
-    errOtp6Digits: "ಒಟಿಪಿ 6 ಅಂಕಿಯದ್ದಾಗಿರಬೇಕು.",
-    errOtpVerifyFailed: "ಒಟಿಪಿ ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ.",
-    errUnableCheckAccount: "ಖಾತೆ ಪರಿಶೀಲಿಸಲಾಗಲಿಲ್ಲ.",
-    errCreateAccount: "ಖಾತೆ ರಚಿಸಲಾಗಲಿಲ್ಲ.",
-    errVerifyOtp: "ಒಟಿಪಿ ಪರಿಶೀಲಿಸಲಾಗಲಿಲ್ಲ.",
-    accountExistsSignIn: "ಖಾತೆ ಈಗಾಗಲೇ ಇದೆ, ದಯವಿಟ್ಟು ಸೈನ್ ಇನ್ ಮಾಡಿ.",
-    accountNotFoundSignUp: "ಖಾತೆ ಸಿಗಲಿಲ್ಲ, ದಯವಿಟ್ಟು ಸೈನ್ ಅಪ್ ಮಾಡಿ.",
+    passwordPlaceholder: "ಪಾಸ್‌ವರ್ಡ್ ನಮೂದಿಸಿ",
+    nameLabel: "ಸಂಪೂರ್ಣ ಹೆಸರು *",
+    namePlaceholder: "ನಿಮ್ಮ ಸಂಪೂರ್ಣ ಹೆಸರು ನಮೂದಿಸಿ",
+    confirmPasswordLabel: "ಪಾಸ್‌ವರ್ಡ್ ದೃಢೀಕರಣ *",
+    confirmPasswordPlaceholder: "ಪಾಸ್‌ವರ್ಡ್ ದೃಢೀಕರಿಸಿ",
+    processing: "ಪ್ರಕ್ರಿಯೆ ಮಾಡಲಾಗುತ್ತಿದೆ...",
+    secureLogin: "ನಿರಾಪದ ಲಾಗಿನ್",
+    signIn: "ಸೈನ್ ಇನ್",
+    signUp: "ಸೈನ್ ಅಪ್",
+    errCompleteRequired: "ದಯವಿಟ್ಟು ಅಗತ್ಯವಿರುವ ಕ್ಷೇತ್ರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ.",
+    errPasswordMatch: "ಪಾಸ್‌ವರ್ಡ್ ಹೊಂದಿಕೆಯಾಗುತ್ತಿಲ್ಲ.",
+    errPasswordMin: "ಪಾಸ್‌ವರ್ಡ್ ಕನಿಷ್ಠ 6 ಅಕ್ಷರಗಳು ಹೊಂದಿರಬೇಕು.",
+    errInvalidCredentials: "ಅಮಾನ್ಯ ಬಳಕೆದಾರ ಹೆಸರು ಅಥವಾ ಪಾಸ್‌ವರ್ಡ್.",
+    errUsernameExists: "ಬಳಕೆದಾರ ಹೆಸರ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ.",
+    errSignInFailed: "ಸೈನ್ ಇನ್ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    errSignUpFailed: "ಸೈನ್ ಅಪ್ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
     signup: {
-      usernameRequired: "ಬಳಕೆದಾರ ಹೆಸರು ಅಗತ್ಯ.",
-      phoneRequired: "ಫೋನ್ ಸಂಖ್ಯೆ ಅಗತ್ಯ.",
-      passwordRequired: "ಪಾಸ್‌ವರ್ಡ್ ಅಗತ್ಯ.",
-      passwordMin: "ಪಾಸ್‌ವರ್ಡ್ ಕನಿಷ್ಠ 6 ಅಕ್ಷರಗಳಿರಬೇಕು.",
+      usernameRequired: "ಬಳಕೆದಾರ ಹೆಸರ ಅಗತ್ಯವಿದೆ.",
+      nameRequired: "ಸಂಪೂರ್ಣ ಹೆಸರ ಅಗತ್ಯವಿದೆ.",
+      passwordRequired: "ಪಾಸ್‌ವರ್ಡ್ ಅಗತ್ಯವಿದೆ.",
+      passwordMin: "ಪಾಸ್‌ವರ್ಡ್ ಕನಿಷ್ಠ 6 ಅಕ್ಷರಗಳು ಹೊಂದಿರಬೇಕು.",
+    },
+    signin: {
+      usernameRequired: "ಬಳಕೆದಾರ ಹೆಸರ ಅಗತ್ಯವಿದೆ.",
+      passwordRequired: "ಪಾಸ್‌ವರ್ಡ್ ಅಗತ್ಯವಿದೆ.",
     },
   },
 };
@@ -159,67 +137,44 @@ function normalizePortal(value) {
   return value === "enterprise" ? "buyer" : value;
 }
 
-function isOtpValid(otp) {
-  return /^\d{6}$/.test(String(otp || "").trim());
-}
-
 function isNonEmpty(value) {
   return Boolean(String(value || "").trim());
 }
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { loading, isAuthenticated, portal, signInWithOtp } = useAuth();
+  const { loading, isAuthenticated, portal, signIn, signUp } = useAuth();
   const { language, content } = useLanguage();
   const t = COPY[language] || COPY.en;
 
-  const [mode, setMode] = useState("signin"); // signin | signup
-  const [selectedPortal, setSelectedPortal] = useState("farmer"); // farmer | buyer
+  const [mode, setMode] = useState("signin");
+  const [selectedPortal, setSelectedPortal] = useState("farmer");
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
-  const [identifier, setIdentifier] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  const [name, setName] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
-  const [cooldownLeft, setCooldownLeft] = useState(0);
-
-  const normalizedPhone = useMemo(() => normalizePhoneInput(identifier), [identifier]);
   const isSignup = mode === "signup";
   const cleanPortal = useMemo(() => normalizePortal(selectedPortal), [selectedPortal]);
 
-  const signupRequirements = useMemo(() => {
-    if (!isSignup) return { ok: true, message: "" };
-
-    if (!isNonEmpty(username)) return { ok: false, message: t.signup.usernameRequired };
-    if (!normalizedPhone) return { ok: false, message: t.signup.phoneRequired };
-    if (!isNonEmpty(password)) return { ok: false, message: t.signup.passwordRequired };
-    if (String(password).length < 6) return { ok: false, message: t.signup.passwordMin };
-
+  const requirements = useMemo(() => {
+    if (isSignup) {
+      if (!isNonEmpty(username)) return { ok: false, message: t.signup.usernameRequired };
+      if (!isNonEmpty(name)) return { ok: false, message: t.signup.nameRequired };
+      if (!isNonEmpty(password)) return { ok: false, message: t.signup.passwordRequired };
+      if (String(password).length < 6) return { ok: false, message: t.signup.passwordMin };
+      if (password !== passwordConfirm) return { ok: false, message: t.errPasswordMatch };
+    } else {
+      if (!isNonEmpty(username)) return { ok: false, message: t.signin.usernameRequired };
+      if (!isNonEmpty(password)) return { ok: false, message: t.signin.passwordRequired };
+    }
     return { ok: true, message: "" };
-  }, [
-    cleanPortal,
-    isSignup,
-    normalizedPhone,
-    password,
-    username,
-  ]);
-
-  const canSendOtp = Boolean(normalizedPhone) && !submitting && (!isSignup || signupRequirements.ok);
-  const canVerifyOtp = Boolean(normalizedPhone) && isOtpValid(otp) && !submitting;
-
-  useEffect(() => {
-    if (!cooldownLeft) return;
-    const timer = window.setInterval(() => {
-      setCooldownLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [cooldownLeft]);
+  }, [isSignup, username, name, password, passwordConfirm, t]);
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
@@ -242,138 +197,39 @@ export default function HomePage() {
     return <Navigate to={getPortalRedirect(portal)} replace />;
   }
 
-  function resetOtpFlow({ keepIdentifier = true } = {}) {
-    setOtpSent(false);
-    setOtp("");
-    setSubmitting(false);
-    setError("");
-    setInfo("");
-    setCooldownLeft(0);
-    if (!keepIdentifier) setIdentifier("");
-  }
-
-  function formatRateLimitMessage() {
-    return t.rateLimit;
-  }
-
-  async function handleSendOtp({ isResend = false } = {}) {
-    setSubmitting(true);
-    setError("");
-    setInfo("");
-
-    try {
-      if (!normalizedPhone) {
-        throw new Error(t.errValidPhone);
-      }
-
-      if (mode === "signup" && !signupRequirements.ok) {
-        throw new Error(signupRequirements.message || t.errCompleteRequired);
-      }
-
-      const { error: invokeError } = await supabase.functions.invoke("send-otp", {
-        body: { phone: normalizedPhone },
-      });
-
-      if (invokeError) {
-        if (invokeError.status === 429) {
-          throw new Error(formatRateLimitMessage());
-        }
-        throw new Error(invokeError.message || t.errFailedSendOtp);
-      }
-
-      setOtpSent(true);
-      setInfo(isResend ? t.otpResent : t.otpSent);
-      setCooldownLeft(RESEND_COOLDOWN_SECONDS);
-    } catch (e) {
-      setError(e?.message || t.errFailedSendOtp);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleVerifyOtp(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setSubmitting(true);
     setError("");
     setInfo("");
 
     try {
-      if (!normalizedPhone) {
-        throw new Error(t.errValidPhone);
+      if (!requirements.ok) {
+        throw new Error(requirements.message || t.errCompleteRequired);
       }
 
-      if (mode === "signup" && !signupRequirements.ok) {
-        throw new Error(signupRequirements.message || t.errCompleteRequired);
-      }
-
-      if (!isOtpValid(otp)) {
-        throw new Error(t.errOtp6Digits);
-      }
-
-      const { error: verifyError } = await supabase.functions.invoke("verify-otp", {
-        body: { phone: normalizedPhone, otp: String(otp).trim() },
-      });
-
-      if (verifyError) {
-        if (verifyError.status === 429) {
-          throw new Error(formatRateLimitMessage());
-        }
-        throw new Error(verifyError.message || t.errOtpVerifyFailed);
-      }
-
-      const { data: existing, error: lookupError } = await supabase
-        .from("app_users")
-        .select("id, phone, portal, name, location_label, farm_size, main_crop, profile_image_url")
-        .eq("phone", normalizedPhone)
-        .maybeSingle();
-
-      if (lookupError) {
-        throw new Error(lookupError.message || t.errUnableCheckAccount);
-      }
-
-      if (mode === "signup") {
-        if (existing) {
-          setMode("signin");
-          setInfo(t.accountExistsSignIn);
-          return;
-        }
-
-        const { error: insertError } = await supabase.from("app_users").insert({
-          phone: normalizedPhone,
-          portal: cleanPortal,
-          name: username.trim(),
+      if (isSignup) {
+        await signUp({
+          username: username.trim(),
+          password: password.trim(),
+          name: name.trim(),
+          role: cleanPortal,
         });
-
-        if (insertError) {
-          if (insertError.code === "23505") {
-            setMode("signin");
-            setInfo(t.accountExistsSignIn);
-            return;
-          }
-          throw new Error(insertError.message || t.errCreateAccount);
-        }
+        setInfo("Account created successfully! Redirecting...");
       } else {
-        if (!existing) {
-          setMode("signup");
-          setInfo(t.accountNotFoundSignUp);
-          return;
-        }
+        await signIn({
+          username: username.trim(),
+          password: password.trim(),
+          role: cleanPortal,
+        });
+        setInfo("Signed in successfully! Redirecting...");
       }
 
-      await signInWithOtp({
-        phone: normalizedPhone,
-        portal: cleanPortal,
-        name: (isSignup ? username.trim() : existing?.name) || undefined,
-        locationLabel: existing?.location_label || "",
-        farmSize: existing?.farm_size || "",
-        mainCrop: existing?.main_crop || "",
-        meta: {
-          profileImageUrl: existing?.profile_image_url || "",
-        },
-      });
-      navigate(getPortalRedirect(cleanPortal), { replace: true });
+      setTimeout(() => {
+        navigate(getPortalRedirect(cleanPortal), { replace: true });
+      }, 300);
     } catch (e) {
-      setError(e?.message || t.errVerifyOtp);
+      setError(e?.message || (isSignup ? t.errSignUpFailed : t.errSignInFailed));
     } finally {
       setSubmitting(false);
     }
@@ -450,7 +306,7 @@ export default function HomePage() {
           </div>
 
           {/* Inputs */}
-          <form className="mt-5 space-y-4" onSubmit={handleVerifyOtp}>
+          <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
             {mode === "signup" ? (
               <div className="space-y-4">
                 <div className="rounded-[22px] border border-leaf-100 bg-leaf-50/40 p-4">
@@ -459,6 +315,80 @@ export default function HomePage() {
                   </p>
                 </div>
 
+                <label className="block">
+                  <span className="mb-2 block text-[11px] font-black uppercase tracking-widest text-leaf-600">
+                    {t.usernameLabel}
+                  </span>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      setError("");
+                      setInfo("");
+                    }}
+                    placeholder={t.usernamePlaceholder}
+                    className="w-full rounded-2xl border border-leaf-100 bg-white px-4 py-4 text-sm font-semibold text-leaf-800 outline-none transition focus:border-leaf-300"
+                    disabled={submitting}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[11px] font-black uppercase tracking-widest text-leaf-600">
+                    {t.nameLabel}
+                  </span>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      setError("");
+                      setInfo("");
+                    }}
+                    placeholder={t.namePlaceholder}
+                    className="w-full rounded-2xl border border-leaf-100 bg-white px-4 py-4 text-sm font-semibold text-leaf-800 outline-none transition focus:border-leaf-300"
+                    disabled={submitting}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[11px] font-black uppercase tracking-widest text-leaf-600">
+                    {t.passwordLabel}
+                  </span>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setError("");
+                      setInfo("");
+                    }}
+                    placeholder={t.passwordPlaceholder}
+                    className="w-full rounded-2xl border border-leaf-100 bg-white px-4 py-4 text-sm font-semibold text-leaf-800 outline-none transition focus:border-leaf-300"
+                    disabled={submitting}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[11px] font-black uppercase tracking-widest text-leaf-600">
+                    {t.confirmPasswordLabel}
+                  </span>
+                  <input
+                    type="password"
+                    value={passwordConfirm}
+                    onChange={(e) => {
+                      setPasswordConfirm(e.target.value);
+                      setError("");
+                      setInfo("");
+                    }}
+                    placeholder={t.confirmPasswordPlaceholder}
+                    className="w-full rounded-2xl border border-leaf-100 bg-white px-4 py-4 text-sm font-semibold text-leaf-800 outline-none transition focus:border-leaf-300"
+                    disabled={submitting}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="space-y-4">
                 <label className="block">
                   <span className="mb-2 block text-[11px] font-black uppercase tracking-widest text-leaf-600">
                     {t.usernameLabel}
@@ -495,76 +425,27 @@ export default function HomePage() {
                   />
                 </label>
               </div>
-            ) : null}
+            )}
 
-            <label className="block">
-              <span className="mb-2 block text-[11px] font-black uppercase tracking-widest text-leaf-600">
-                {t.phoneLabel}
-              </span>
-              <input
-                type="tel"
-                value={identifier}
-                onChange={(e) => {
-                  setIdentifier(e.target.value);
-                  setError("");
-                  setInfo("");
-                }}
-                placeholder={t.phonePlaceholder}
-                className="w-full rounded-2xl border border-leaf-100 bg-leaf-50 px-4 py-4 text-sm font-semibold text-leaf-800 outline-none transition focus:border-leaf-300 focus:bg-white"
-                disabled={submitting}
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-[11px] font-black uppercase tracking-widest text-leaf-600">
-                {t.otpLabel}
-              </span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={otp}
-                onChange={(e) => {
-                  setOtp(e.target.value.replace(/\D/g, "").slice(0, 6));
-                  setError("");
-                  setInfo("");
-                }}
-                placeholder={t.otpPlaceholder}
-                className="w-full rounded-2xl border border-leaf-100 bg-white px-4 py-4 text-sm font-semibold text-leaf-800 outline-none transition focus:border-leaf-300"
-                disabled={submitting}
-              />
-            </label>
-
-            {/* Single primary button */}
+            {/* Primary button */}
             <button
               type="submit"
-              disabled={!otpSent || !canVerifyOtp}
+              disabled={!requirements.ok || submitting}
               className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-700 bg-emerald-700 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-800 disabled:opacity-60"
             >
               {submitting ? (
                 t.processing
-              ) : otpSent ? (
+              ) : isSignup ? (
                 <>
-                  {t.verifyOtp}
+                  {t.signUp}
                   <ArrowRight size={18} />
                 </>
               ) : (
                 <>
-                  {t.secureLogin} <span className="translate-y-[1px]">→</span>
+                  {t.signIn} <span className="translate-y-[1px]">→</span>
                 </>
               )}
             </button>
-
-            {/* OTP action below primary */}
-            {!otpSent ? (
-              <button
-                type="button"
-                onClick={() => handleSendOtp({ isResend: false })}
-                disabled={!canSendOtp}
-                className="w-full rounded-2xl border border-leaf-100 bg-white px-5 py-3 text-sm font-bold text-leaf-800 transition hover:bg-leaf-50 disabled:opacity-60"
-              >
-                {submitting ? t.sending : t.sendOtp}
-              </button>
-            ) : null}
 
             {error ? (
               <p className="rounded-2xl bg-soil-50 px-4 py-3 text-sm font-semibold text-soil-700">
@@ -576,27 +457,6 @@ export default function HomePage() {
                 {info}
               </p>
             ) : null}
-
-            {/* Footer actions */}
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-leaf-100 pt-4 text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => resetOtpFlow({ keepIdentifier: false })}
-                className="text-leaf-700 hover:text-leaf-900"
-                disabled={submitting}
-              >
-                {t.changeNumber}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSendOtp({ isResend: true })}
-                disabled={!otpSent || submitting || cooldownLeft > 0 || !normalizedPhone}
-                className="text-leaf-700 hover:text-leaf-900 disabled:opacity-60"
-              >
-                {cooldownLeft > 0 ? t.resendOtpWithCountdown.replace("{s}", String(cooldownLeft)) : t.resendOtp}
-              </button>
-            </div>
           </form>
         </div>
       </div>

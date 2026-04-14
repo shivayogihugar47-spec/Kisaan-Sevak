@@ -462,7 +462,7 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Floating Bottom Nav for Mobile-First usage */}
+      {/* Floating Bottom Nav for Mobile-First usage
       <footer className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 px-6 py-3 md:hidden flex justify-between items-center z-50">
         <NavIcon icon={LayoutGrid} active />
         <NavIcon icon={Store} />
@@ -471,7 +471,7 @@ export default function Dashboard() {
         </div>
         <NavIcon icon={TrendingUp} />
         <NavIcon icon={Navigation} />
-      </footer>
+      </footer> */}
     </div>
   );
 }

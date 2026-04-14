@@ -24,7 +24,6 @@ import AgriInsure from "./pages/AgriInsure";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import EnterpriseDashboardPage from "./pages/EnterpriseDashboardPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
-import OnboardingPage from "./pages/OnboardingPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Context & Auth
@@ -135,7 +134,7 @@ export default function App() {
             <Route path="/onboarding" element={
               isAuthenticated
                 ? <Navigate to={userPortal === "buyer" || userPortal === "enterprise" ? "/buyer-dashboard" : userPortal === "admin" ? "/admin" : "/farmer-dashboard"} replace />
-                : <OnboardingPage />
+                : <Navigate to="/" replace />
             } />
             <Route path="/seller-dashboard" element={<Navigate to="/" replace />} />
 

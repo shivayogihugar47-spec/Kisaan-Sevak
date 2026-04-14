@@ -12,82 +12,81 @@ import PageWrapper from "../components/PageWrapper";
 import { useLanguage } from "../context/LanguageContext";
 import { getMandiPricesWithHistory, getMarketInsights } from "../services/mandiService";
 
-// Comprehensive, farmer-friendly categorized crop list
+// Crop catalog (same as before)
 const CROP_CATALOG = [
   {
     category: "Grains & Cereals",
     items: [
-      { name: "Paddy", icon: Wheat, color: "bg-amber-100 text-amber-700" },
-      { name: "Wheat", icon: Wheat, color: "bg-amber-100 text-amber-700" },
-      { name: "Maize", icon: Sun, color: "bg-yellow-100 text-yellow-700" },
-      { name: "Jowar", icon: Sprout, color: "bg-orange-100 text-orange-700" },
-      { name: "Bajra", icon: Wheat, color: "bg-amber-50 text-amber-600" },
-      { name: "Ragi", icon: Sprout, color: "bg-stone-200 text-stone-800" },
+      { name: "Paddy", icon: Wheat, color: "text-amber-600" },
+      { name: "Wheat", icon: Wheat, color: "text-amber-600" },
+      { name: "Maize", icon: Sun, color: "text-yellow-600" },
+      { name: "Jowar", icon: Sprout, color: "text-orange-600" },
+      { name: "Bajra", icon: Wheat, color: "text-amber-500" },
+      { name: "Ragi", icon: Sprout, color: "text-stone-600" },
     ]
   },
   {
     category: "Pulses (Dal)",
     items: [
-      { name: "Tur Dal", icon: Leaf, color: "bg-yellow-100 text-yellow-600" },
-      { name: "Moong", icon: Sprout, color: "bg-leaf-100 text-leaf-600" },
-      { name: "Chana", icon: Coffee, color: "bg-orange-100 text-orange-800" },
-      { name: "Urad", icon: Leaf, color: "bg-gray-200 text-gray-800" },
+      { name: "Tur Dal", icon: Leaf, color: "text-yellow-600" },
+      { name: "Moong", icon: Sprout, color: "text-emerald-600" },
+      { name: "Chana", icon: Coffee, color: "text-orange-700" },
+      { name: "Urad", icon: Leaf, color: "text-gray-600" },
     ]
   },
   {
     category: "Vegetables",
     items: [
-      { name: "Onion", icon: Leaf, color: "bg-purple-100 text-purple-700" },
-      { name: "Tomato", icon: Apple, color: "bg-red-100 text-red-700" },
-      { name: "Potato", icon: Sprout, color: "bg-yellow-100 text-yellow-800" },
-      { name: "Garlic", icon: Leaf, color: "bg-slate-100 text-slate-700" },
-      { name: "Cabbage", icon: Leaf, color: "bg-leaf-100 text-leaf-700" },
-      { name: "Brinjal", icon: Sprout, color: "bg-indigo-100 text-indigo-700" },
-      { name: "Okra", icon: Leaf, color: "bg-leaf-100 text-leaf-700" },
+      { name: "Onion", icon: Leaf, color: "text-purple-600" },
+      { name: "Tomato", icon: Apple, color: "text-red-600" },
+      { name: "Potato", icon: Sprout, color: "text-yellow-700" },
+      { name: "Garlic", icon: Leaf, color: "text-slate-600" },
+      { name: "Cabbage", icon: Leaf, color: "text-emerald-600" },
+      { name: "Brinjal", icon: Sprout, color: "text-indigo-600" },
+      { name: "Okra", icon: Leaf, color: "text-emerald-600" },
     ]
   },
   {
     category: "Fruits",
     items: [
-      { name: "Banana", icon: Sun, color: "bg-yellow-100 text-yellow-600" },
-      { name: "Apple", icon: Apple, color: "bg-red-100 text-red-600" },
-      { name: "Mango", icon: Leaf, color: "bg-orange-100 text-orange-600" },
-      { name: "Grapes", icon: Sprout, color: "bg-purple-100 text-purple-800" },
-      { name: "Papaya", icon: Sun, color: "bg-orange-50 text-orange-500" },
-      { name: "Pomegranate", icon: Apple, color: "bg-rose-100 text-rose-700" },
+      { name: "Banana", icon: Sun, color: "text-yellow-500" },
+      { name: "Apple", icon: Apple, color: "text-red-500" },
+      { name: "Mango", icon: Leaf, color: "text-orange-500" },
+      { name: "Grapes", icon: Sprout, color: "text-purple-600" },
+      { name: "Papaya", icon: Sun, color: "text-orange-400" },
+      { name: "Pomegranate", icon: Apple, color: "text-rose-600" },
     ]
   },
   {
     category: "Commercial & Oil Seeds",
     items: [
-      { name: "Cotton", icon: Droplets, color: "bg-blue-100 text-blue-700" },
-      { name: "Sugarcane", icon: Sprout, color: "bg-leaf-100 text-leaf-700" },
-      { name: "Soyabean", icon: Leaf, color: "bg-lime-100 text-lime-700" },
-      { name: "Groundnut", icon: Coffee, color: "bg-stone-100 text-stone-700" },
-      { name: "Mustard", icon: Sun, color: "bg-yellow-200 text-yellow-800" },
-      { name: "Sunflower", icon: Sun, color: "bg-amber-100 text-amber-600" },
+      { name: "Cotton", icon: Droplets, color: "text-blue-600" },
+      { name: "Sugarcane", icon: Sprout, color: "text-emerald-600" },
+      { name: "Soyabean", icon: Leaf, color: "text-lime-600" },
+      { name: "Groundnut", icon: Coffee, color: "text-stone-600" },
+      { name: "Mustard", icon: Sun, color: "text-yellow-700" },
+      { name: "Sunflower", icon: Sun, color: "text-amber-500" },
     ]
   },
   {
     category: "Spices",
     items: [
-      { name: "Turmeric", icon: Flame, color: "bg-yellow-200 text-yellow-700" },
-      { name: "Red Chilli", icon: Flame, color: "bg-red-200 text-red-700" },
-      { name: "Coriander", icon: Leaf, color: "bg-leaf-100 text-leaf-800" },
-      { name: "Black Pepper", icon: Coffee, color: "bg-gray-200 text-gray-900" },
+      { name: "Turmeric", icon: Flame, color: "text-yellow-600" },
+      { name: "Red Chilli", icon: Flame, color: "text-red-600" },
+      { name: "Coriander", icon: Leaf, color: "text-emerald-600" },
+      { name: "Black Pepper", icon: Coffee, color: "text-gray-700" },
     ]
   }
 ];
 
-// Animation Variants
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.05 } }
+  show: { opacity: 1, transition: { staggerChildren: 0.04 } }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } }
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } }
 };
 
 export default function MandiMitraPage() {
@@ -117,41 +116,27 @@ export default function MandiMitraPage() {
       setCurrentPrice(null);
       return;
     }
-
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       setHasSearched(true);
       fetchMandiData();
     }, 500);
-
     return () => clearTimeout(debounceTimer.current);
   }, [searchCrop]);
 
   const fetchMandiData = async () => {
     if (!searchCrop.trim()) return;
-
     setLoading(true);
     const result = await getMandiPricesWithHistory(searchCrop, state, district);
-
     if (result.success) {
-      const modalPrices = result.data
-        .map((p) => Number(p.modalPrice))
-        .filter((n) => Number.isFinite(n));
-      const avgPrice =
-        modalPrices.length > 0
-          ? modalPrices.reduce((sum, n) => sum + n, 0) / modalPrices.length
-          : 0;
-
-      const transformedData = result.data.map((item) => {
+      const modalPrices = result.data.map(p => Number(p.modalPrice)).filter(n => Number.isFinite(n));
+      const avgPrice = modalPrices.length ? modalPrices.reduce((s, n) => s + n, 0) / modalPrices.length : 0;
+      const transformedData = result.data.map(item => {
         const modalPrice = Number(item.modalPrice);
         const trendPercent = avgPrice ? ((modalPrice - avgPrice) / avgPrice) * 100 : 0;
         const rounded = Math.round(trendPercent * 10) / 10;
         const type = rounded >= 0 ? "up" : "down";
         const tagKey = rounded >= 0 ? "sellNow" : "wait";
-
         return {
           name: `${item.commodity}`,
           market: item.market || item.district || "Mandi",
@@ -165,7 +150,6 @@ export default function MandiMitraPage() {
           isLiveGovtData: item.isLiveGovtData
         };
       });
-
       setMandiData(transformedData);
       setHistoricalData(result.history || []);
       setCurrentPrice(Number(result.current?.modalPrice ?? 0));
@@ -175,12 +159,8 @@ export default function MandiMitraPage() {
       setHistoricalData([]);
       setCurrentPrice(null);
       setInsight({
-        insight:
-          formatCopy(content?.mandiUi?.noMandiDataInsight, {
-            crop: searchCrop,
-            district,
-            state,
-          }) || `No mandi data found for "${searchCrop}" in ${district}, ${state}.`,
+        insight: formatCopy(content?.mandiUi?.noMandiDataInsight, { crop: searchCrop, district, state }) ||
+          `No mandi data found for "${searchCrop}" in ${district}, ${state}.`,
         trend: "flat",
         percentage: 0,
       });
@@ -188,104 +168,79 @@ export default function MandiMitraPage() {
     setLoading(false);
   };
 
-  const handleClearSearch = () => {
-    setSearchCrop("");
-  };
+  const handleClearSearch = () => setSearchCrop("");
 
   return (
     <PageWrapper>
-      <Header 
-        title={content?.mandi?.title ?? "Mandi Mitra"} 
-        subtitle={formatCopy(content?.mandiUi?.headerSubtitle, { district, state }) || `${district}, ${state}`} 
-        showBack 
+      <Header
+        title={content?.mandi?.title ?? "Mandi Mitra"}
+        subtitle={formatCopy(content?.mandiUi?.headerSubtitle, { district, state }) || `${district}, ${state}`}
+        showBack
       />
       <div className="mx-auto max-w-5xl px-5 pb-12 md:px-8">
 
-        {/* SEARCH SECTION */}
+        {/* Search Section – Professional & Minimal */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-[28px] border border-slate-200/60 bg-white p-5 shadow-sm md:p-6"
+          className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm md:p-6"
         >
-          <h2 className="font-display text-lg font-black text-slate-900">
+          <h2 className="text-base font-semibold text-gray-900">
             {content?.mandiUi?.findTitle ?? "Find mandi prices"}
           </h2>
-          <div className="relative mt-4">
-            <SearchIcon size={20} className="absolute left-4 top-4 text-slate-400" />
+          <div className="relative mt-3">
+            <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               placeholder={content?.mandiUi?.searchPlaceholder ?? "Type or tap a crop below..."}
               value={searchCrop}
               onChange={(e) => setSearchCrop(e.target.value)}
-              className="w-full rounded-2xl bg-slate-50 py-4 pl-12 pr-12 text-sm font-semibold text-slate-900 placeholder-slate-400 outline-none transition-shadow focus:bg-white focus:ring-2 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
             {searchCrop && (
               <button
                 onClick={handleClearSearch}
-                className="absolute right-4 top-4 text-slate-400 transition-colors hover:text-slate-700"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                <X size={20} />
+                <X size={16} />
               </button>
             )}
           </div>
         </motion.div>
 
-        {/* DYNAMIC CONTENT AREA */}
+        {/* Dynamic Content */}
         {!hasSearched ? (
-          /* FARMER-FRIENDLY CROP CATALOG */
-          <motion.div variants={containerVariants} initial="hidden" animate="show" className="mt-8 space-y-8">
-            <motion.div variants={itemVariants} className="flex items-start gap-4 rounded-[24px] border border-slate-200/60 bg-white p-5 shadow-sm">
-              <div className="shrink-0 rounded-xl bg-emerald-50 p-2 text-emerald-700">
-                <ArrowUpRight size={20} />
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-slate-900">{content?.mandiUi?.tipTitle ?? "Tip"}</h4>
-                <p className="mt-1 text-xs font-semibold text-slate-600">
-                  {content?.mandiUi?.tipBody ??
-                    "Start by tapping a crop category below. You’ll see verified mandi prices and a clean trend view."}
-                </p>
-              </div>
+          <motion.div variants={containerVariants} initial="hidden" animate="show" className="mt-6 space-y-8">
+            {/* Tip note – subtle */}
+            <motion.div variants={itemVariants} className="rounded-lg border border-gray-100 bg-gray-50/50 p-4 text-sm text-gray-600">
+              <span className="font-medium text-gray-900">{content?.mandiUi?.tipTitle ?? "Tip"}:</span>{" "}
+              {content?.mandiUi?.tipBody ??
+                "Tap any crop below to see verified mandi prices and trend insights."}
             </motion.div>
 
             {CROP_CATALOG.map((group, idx) => (
-              <motion.div variants={itemVariants} key={idx} className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h4 className="pl-1 text-xs font-black uppercase tracking-[0.22em] text-slate-500">
+              <motion.div variants={itemVariants} key={idx} className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                     {content?.mandiUi?.categories?.[group.category] ?? group.category}
                   </h4>
-                  <div className="h-px flex-1 bg-slate-200/70" />
+                  <div className="h-px flex-1 bg-gray-100" />
                 </div>
-
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
                   {group.items.map((crop, cIdx) => {
                     const Icon = crop.icon;
                     return (
                       <button
                         key={cIdx}
                         onClick={() => setSearchCrop(crop.name)}
-                        className="group relative flex items-center justify-between gap-3 rounded-3xl border border-slate-200/70 bg-gradient-to-br from-white to-slate-50/60 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md hover:ring-2 hover:ring-emerald-200/60 active:translate-y-0 overflow-hidden"
+                        className="group flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-gray-300 hover:shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                       >
-                        <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-emerald-200/40 blur-2xl opacity-0 transition-opacity group-hover:opacity-100" />
-                        <div className="pointer-events-none absolute -left-10 -bottom-10 h-24 w-24 rounded-full bg-sun-200/30 blur-2xl opacity-0 transition-opacity group-hover:opacity-100" />
-
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-                            <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${crop.color} ring-1 ring-black/5`}>
-                              <Icon size={18} />
-                            </div>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="block truncate text-sm font-black text-slate-900">{crop.name}</span>
-                            <span className="mt-0.5 block text-[10px] font-semibold text-slate-500">
-                              {content?.mandiUi?.viewPricesTrend ?? "View prices & trend"}
-                            </span>
-                          </div>
+                        <div className={`shrink-0 ${crop.color}`}>
+                          <Icon size={18} />
                         </div>
-                        <div className="shrink-0 flex items-center gap-2">
-                          <span className="hidden sm:inline text-[10px] font-black uppercase tracking-[0.22em] text-slate-300 group-hover:text-emerald-700 transition-colors">
-                            {content?.mandiUi?.open ?? "Open"}
-                          </span>
-                          <ChevronRight size={18} className="text-slate-300 transition group-hover:text-emerald-700" />
-                        </div>
+                        <span className="text-sm font-medium text-gray-800 group-hover:text-gray-900">
+                          {crop.name}
+                        </span>
+                        <ChevronRight size={14} className="ml-auto text-gray-300 group-hover:text-gray-500" />
                       </button>
                     );
                   })}
@@ -294,163 +249,157 @@ export default function MandiMitraPage() {
             ))}
           </motion.div>
         ) : (
-          /* POST-SEARCH RESULTS */
-          <motion.div variants={containerVariants} initial="hidden" animate="show" className="mt-8">
-            <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[32px] border border-slate-200/60 bg-white p-6 shadow-sm md:p-8">
-              <div className="absolute -right-8 -top-8 opacity-10">
-                <Sprout size={140} />
-              </div>
-              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">
+          <motion.div variants={containerVariants} initial="hidden" animate="show" className="mt-6 space-y-6">
+            {/* Insight card – clean border-left accent */}
+            <motion.div variants={itemVariants} className="rounded-lg border-l-4 border-emerald-500 bg-white p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                 {content?.mandiUi?.marketInsight ?? "Market insight"}
               </p>
-              <p className="mt-3 font-display text-lg font-black leading-snug text-slate-900 md:text-xl md:leading-relaxed">
+              <p className="mt-2 text-base font-medium text-gray-800 leading-relaxed">
                 {insight.insight}
               </p>
-              <p className="mt-3 text-sm font-semibold text-slate-600">
-                {(content?.mandiUi?.basedOnRecent ?? "Based on recent mandi data for")}&nbsp;
-                <span className="font-black text-slate-900">{searchCrop}</span>.
+              <p className="mt-2 text-xs text-gray-500">
+                {content?.mandiUi?.basedOnRecent ?? "Based on recent mandi data for"}{" "}
+                <span className="font-semibold text-gray-800">{searchCrop}</span>.
               </p>
             </motion.div>
 
-            {/* TREND CARD WITH REAL GRAPH */}
-            <motion.div variants={itemVariants} className="mt-6 rounded-[32px] border border-slate-200/60 bg-white p-6 shadow-sm md:p-8">
-              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">
-                {formatCopy(content?.mandiUi?.averageLabel, { district }) || `${district} average`}
-              </p>
-              <h2 className="mt-1 font-display text-2xl font-black text-slate-900">
-                {formatCopy(content?.mandiUi?.trendTitle, { crop: searchCrop }) || `${searchCrop} trend`}
-              </h2>
-
-              <div className="mt-4 flex items-end justify-between">
-                <p className="font-display text-4xl font-black text-slate-900 md:text-5xl">₹{currentPrice || "---"}</p>
-                <div className={`flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-black ${insight.trend === "up" ? "bg-emerald-50 text-emerald-700" : insight.trend === "down" ? "bg-rose-50 text-rose-700" : "bg-slate-50 text-slate-600"}`}>
-                  {insight.trend === "up" ? <ArrowUpRight size={18} /> : insight.trend === "down" ? <ArrowDownRight size={18} /> : null}
-                  {insight.trend === "up" ? "+" : insight.trend === "down" ? "" : ""}{insight.percentage}%
+            {/* Trend Card */}
+            <motion.div variants={itemVariants} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    {formatCopy(content?.mandiUi?.averageLabel, { district }) || `${district} average`}
+                  </p>
+                  <h3 className="mt-1 text-xl font-semibold text-gray-900">
+                    {formatCopy(content?.mandiUi?.trendTitle, { crop: searchCrop }) || `${searchCrop} trend`}
+                  </h3>
+                </div>
+                <div className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
+                  insight.trend === "up" ? "bg-emerald-50 text-emerald-700" :
+                  insight.trend === "down" ? "bg-rose-50 text-rose-700" :
+                  "bg-gray-100 text-gray-600"
+                }`}>
+                  {insight.trend === "up" && <ArrowUpRight size={14} />}
+                  {insight.trend === "down" && <ArrowDownRight size={14} />}
+                  {insight.percentage}%
                 </div>
               </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-gray-900">₹{currentPrice || "—"}</span>
+                <span className="text-xs text-gray-500">/ quintal</span>
+              </div>
 
-              {/* REAL GRAPH */}
               {!loading && historicalData.length > 0 ? (
-                <div className="mt-8 h-48 rounded-xl md:h-56">
+                <div className="mt-6 h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={historicalData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-                      <XAxis dataKey="day" stroke="#94a3b8" style={{ fontSize: "11px", fontWeight: 800 }} axisLine={false} tickLine={false} dy={10} />
-                      <YAxis stroke="#94a3b8" style={{ fontSize: "11px", fontWeight: 800 }} axisLine={false} tickLine={false} />
+                      <XAxis dataKey="day" stroke="#94a3b8" fontSize={10} axisLine={false} tickLine={false} dy={6} />
+                      <YAxis stroke="#94a3b8" fontSize={10} axisLine={false} tickLine={false} />
                       <Tooltip
-                        contentStyle={{ backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "14px", color: "#0f172a", fontWeight: 800, padding: "10px 12px" }}
-                        itemStyle={{ color: "#0f172a" }}
+                        contentStyle={{ backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "12px" }}
                         formatter={(value) => [`₹${value}`, "Price"]}
-                        labelStyle={{ color: "#64748b", marginBottom: "4px", fontSize: "12px", textTransform: "uppercase", fontWeight: 900 }}
                       />
-                      <Line type="monotone" dataKey="price" stroke="#0f766e" strokeWidth={3.5} dot={{ fill: "#0f766e", strokeWidth: 3, r: 5, stroke: "white" }} activeDot={{ r: 7 }} />
+                      <Line type="monotone" dataKey="price" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-              ) : (
-                <div className="mt-8 flex h-48 items-center justify-center rounded-2xl bg-slate-50 md:h-56">
-                  {loading && (
-                    <p className="text-sm font-black text-slate-600 animate-pulse">
-                      {content?.mandiUi?.loadingTrend ?? "Loading trend..."}
-                    </p>
-                  )}
+              ) : loading ? (
+                <div className="mt-6 flex h-48 items-center justify-center rounded-lg bg-gray-50">
+                  <p className="text-sm text-gray-500 animate-pulse">{content?.mandiUi?.loadingTrend ?? "Loading trend..."}</p>
                 </div>
-              )}
+              ) : null}
             </motion.div>
 
-            {/* LIST HEADER */}
-            <motion.div variants={itemVariants} className="mb-4 mt-8 flex items-end justify-between gap-4 px-1">
+            {/* Live Prices Header */}
+            <div className="flex items-end justify-between">
               <div>
-                <h2 className="font-display text-xl font-black text-slate-900">
-                  {content?.mandiUi?.livePricesTitle ?? "Live mandi prices"}
-                </h2>
-                <p className="mt-1 text-xs font-semibold text-slate-500">
-                  {content?.mandiUi?.livePricesSubtitle ?? "Market • Price • Trend • Distance"}
-                </p>
+                <h2 className="text-lg font-semibold text-gray-900">{content?.mandiUi?.livePricesTitle ?? "Live mandi prices"}</h2>
+                <p className="text-xs text-gray-500">{content?.mandiUi?.livePricesSubtitle ?? "Market • Price • Trend • Distance"}</p>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-700">
+              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-medium uppercase text-gray-600">
                 {content?.mandiUi?.latest ?? "Latest"}
               </span>
-            </motion.div>
+            </div>
 
-            {/* CARDS */}
-            <motion.div variants={containerVariants} className="space-y-4">
+            {/* Price Cards – Professional Table-like layout */}
+            <motion.div variants={containerVariants} className="space-y-3">
               {loading ? (
-                <div className="rounded-[32px] border border-leaf-100 bg-white py-12 text-center shadow-sm">
-                  <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-leaf-200 border-t-leaf-600"></div>
-                  <p className="font-bold text-leaf-500">
+                <div className="rounded-lg border border-gray-100 bg-white py-12 text-center">
+                  <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-emerald-600"></div>
+                  <p className="text-sm text-gray-500">
                     {formatCopy(content?.mandiUi?.fetchingOfficial, { crop: searchCrop }) ||
                       `Fetching official prices for ${searchCrop}...`}
                   </p>
                 </div>
               ) : mandiData.length > 0 ? (
                 mandiData.map((item, i) => (
-                  <motion.div variants={itemVariants} key={i} className="rounded-[28px] border border-slate-200/60 bg-white p-5 shadow-sm md:p-6">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-display text-lg font-black leading-tight text-slate-900 md:text-xl truncate">{item.market}</p>
-                        <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-                          <MapPin size={14} className="text-slate-500" /> {item.location}
-                        </p>
+                  <motion.div variants={itemVariants} key={i} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-medium text-gray-900">{item.market}</h3>
+                        <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+                          <MapPin size={12} /> {item.location}
+                        </div>
                       </div>
-
                       <div className="flex items-center gap-2">
                         {item.isLiveGovtData ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-700">
-                            <ShieldCheck size={12} /> {content?.mandiUi?.verified ?? "Verified"}
+                          <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                            <ShieldCheck size={10} /> Verified
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-amber-700">
-                            <AlertCircle size={12} /> {content?.mandiUi?.estimate ?? "Estimate"}
+                          <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                            <AlertCircle size={10} /> Estimate
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="mt-5 grid gap-3 sm:grid-cols-4">
-                      <StatCell label={content?.mandiUi?.pricePerQuintal ?? "Price / quintal"} value={item.price} strong />
-                      <StatCell
-                        label={content?.mandiUi?.trend ?? "Trend"}
-                        value={`${item.trend}`}
-                        right
-                        tone={item.type === "up" ? "text-emerald-700" : "text-rose-700"}
-                        icon={item.type === "up" ? ArrowUpRight : ArrowDownRight}
-                      />
-                      <StatCell label={content?.mandiUi?.distance ?? "Distance"} value={item.distance} right />
-                      <div className="flex items-center justify-end">
-                        <span
-                          className={`rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] ${
-                            item.tagKey === "sellNow"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-slate-50 text-slate-600"
-                          }`}
-                        >
-                          {item.tagKey === "sellNow"
-                            ? content?.mandiUi?.sellNow ?? "SELL NOW"
-                            : content?.mandiUi?.wait ?? "WAIT"}
+                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <div>
+                        <p className="text-xs text-gray-400">Price / quintal</p>
+                        <p className="text-base font-semibold text-gray-900">{item.price}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400">Trend</p>
+                        <p className={`inline-flex items-center gap-0.5 text-sm font-medium ${item.type === "up" ? "text-emerald-600" : "text-rose-600"}`}>
+                          {item.type === "up" ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                          {item.trend}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400">Distance</p>
+                        <p className="text-sm font-medium text-gray-700">{item.distance}</p>
+                      </div>
+                      <div className="flex justify-end">
+                        <span className={`rounded-full px-3 py-1 text-[10px] font-semibold ${
+                          item.tagKey === "sellNow" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"
+                        }`}>
+                          {item.tagKey === "sellNow" ? "SELL NOW" : "WAIT"}
                         </span>
                       </div>
                     </div>
 
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <button className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white py-3 text-sm font-black text-slate-800 shadow-sm transition hover:bg-slate-50 active:scale-[0.99]">
-                        <Phone size={18} /> {content?.mandiUi?.contactAgent ?? "Contact agent"}
-                      </button>
-                      <button className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3 text-sm font-black text-white shadow-sm transition hover:bg-black active:scale-[0.99]">
-                        <ArrowUpRight size={18} /> {content?.mandiUi?.save ?? "Save"}
+                    <div className="mt-4 flex gap-3">
+                      <button 
+                        onClick={() => window.open(`tel:+919876543210`)}
+                        className="flex-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                      >
+                        <Phone size={14} className="inline mr-1" /> Contact agent
                       </button>
                     </div>
                   </motion.div>
                 ))
               ) : (
-                <div className="rounded-[32px] border border-leaf-100 bg-white py-16 text-center shadow-sm">
-                  <SearchIcon size={40} className="mx-auto mb-4 text-leaf-200" />
-                  <p className="text-lg font-bold text-leaf-900">{content?.mandiUi?.noDataTitle ?? "No data found"}</p>
-                  <p className="mb-6 mt-1 text-sm text-leaf-500">
+                <div className="rounded-lg border border-gray-100 bg-white py-16 text-center">
+                  <SearchIcon size={32} className="mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium text-gray-800">{content?.mandiUi?.noDataTitle ?? "No data found"}</p>
+                  <p className="mt-1 text-sm text-gray-500">
                     {formatCopy(content?.mandiUi?.noDataBody, { crop: searchCrop }) ||
                       `We couldn't find active trades for ${searchCrop} in your area today.`}
                   </p>
-                  <button onClick={handleClearSearch} className="rounded-xl bg-leaf-50 px-6 py-3 text-sm font-bold text-leaf-800 transition-colors hover:bg-leaf-100">
+                  <button onClick={handleClearSearch} className="mt-4 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     {content?.mandiUi?.browseOtherCrops ?? "Browse other crops"}
                   </button>
                 </div>
@@ -463,13 +412,14 @@ export default function MandiMitraPage() {
   );
 }
 
+// Helper components (unchanged)
 function StatCell({ label, value, strong, right, tone, icon: Icon }) {
   return (
-    <div className={`rounded-2xl border border-slate-200/60 bg-slate-50 px-4 py-3 ${right ? "text-right" : ""}`}>
-      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{label}</p>
-      <div className={`mt-1 flex items-center ${right ? "justify-end" : "justify-start"} gap-1.5`}>
-        {Icon ? <Icon size={16} className={tone || "text-slate-500"} /> : null}
-        <p className={`${strong ? "font-display text-xl font-black" : "text-sm font-black"} ${tone || "text-slate-900"}`}>
+    <div className={`rounded-lg border border-gray-100 bg-gray-50/30 px-3 py-2 ${right ? "text-right" : ""}`}>
+      <p className="text-[10px] font-medium uppercase tracking-wider text-gray-400">{label}</p>
+      <div className={`mt-1 flex items-center ${right ? "justify-end" : "justify-start"} gap-1`}>
+        {Icon && <Icon size={14} className={tone || "text-gray-500"} />}
+        <p className={`${strong ? "text-base font-semibold" : "text-sm font-medium"} ${tone || "text-gray-800"}`}>
           {value}
         </p>
       </div>

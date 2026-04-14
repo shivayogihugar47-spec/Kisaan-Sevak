@@ -2,6 +2,7 @@ import en from "./en";
 import hi from "./hi";
 import kn from "./kn";
 
+// Export supportedLanguages for backward compatibility
 export const supportedLanguages = [
   { code: "en", label: "English" },
   { code: "hi", label: "हिंदी" },

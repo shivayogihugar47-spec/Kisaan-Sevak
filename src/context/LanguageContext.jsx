@@ -9,12 +9,14 @@ export function LanguageProvider({ children }) {
     if (typeof window === "undefined") {
       return "en";
     }
-
     return window.localStorage.getItem(STORAGE_KEY) ?? "en";
   });
 
+  const [content, setContent] = useState(() => getTranslation(language));
+
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, language);
+    setContent(getTranslation(language));
   }, [language]);
 
   const value = useMemo(
@@ -22,9 +24,9 @@ export function LanguageProvider({ children }) {
       language,
       setLanguage,
       languages: supportedLanguages,
-      content: getTranslation(language),
+      content,
     }),
-    [language],
+    [language, content],
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

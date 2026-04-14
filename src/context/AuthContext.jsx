@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+﻿import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
-const SESSION_STORAGE_KEY = "kisaan-sevak-otp-session";
+const SESSION_STORAGE_KEY = "kisaan-sevak-session";
 
 function readSession() {
   try {
@@ -24,16 +25,13 @@ function clearSession() {
   }
 }
 
-function buildSessionProfile({ phone, portal, name, locationLabel, farmSize, mainCrop, meta }) {
+function buildSessionProfile({ username, portal, name, role, meta }) {
   const cleanName = String(name || "").trim() || "User";
   return {
-    id: phone,
+    id: username,
+    username,
     name: cleanName,
-    phone,
-    locationLabel: String(locationLabel || "").trim(),
-    farmSize: String(farmSize || "").trim(),
-    mainCrop: String(mainCrop || "").trim(),
-    role: portal, // keep compatibility with existing route guards/sidebar
+    role: role || portal,
     meta: meta || null,
   };
 }
@@ -46,23 +44,20 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const session = readSession();
-    if (session?.phone && session?.portal) {
+    if (session?.username && session?.role) {
       const nextUser = {
-        id: session.phone,
-        uid: session.phone,
+        id: session.username,
+        username: session.username,
         name: session?.name || "User",
-        identifier: session.phone,
       };
       setUser(nextUser);
-      setPortal(session.portal);
+      setPortal(session.role);
       setProfile(
         buildSessionProfile({
-          phone: session.phone,
-          portal: session.portal,
+          username: session.username,
+          portal: session.role,
           name: session?.name,
-          locationLabel: session?.locationLabel,
-          farmSize: session?.farmSize,
-          mainCrop: session?.mainCrop,
+          role: session.role,
           meta: session?.meta,
         }),
       );
@@ -70,49 +65,151 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  async function signInWithOtp({ phone, portal: nextPortal, name, locationLabel, farmSize, mainCrop, meta }) {
-    const cleanPhone = String(phone || "").trim();
-    const cleanPortal = String(nextPortal || "").trim();
+  async function signUp({ username, password, name, role }) {
+    const cleanUsername = String(username || "").trim();
+    const cleanPassword = String(password || "").trim();
     const cleanName = String(name || "").trim() || "User";
-    const cleanLocationLabel = String(locationLabel || "").trim();
-    const cleanFarmSize = String(farmSize || "").trim();
-    const cleanMainCrop = String(mainCrop || "").trim();
+    const cleanRole = String(role || "").trim();
 
-    if (!cleanPhone || !cleanPortal) {
-      throw new Error("Phone and portal are required.");
+    if (!cleanUsername || !cleanPassword || !cleanRole) {
+      throw new Error("Username, password, and role are required.");
     }
 
+    if (cleanPassword.length < 6) {
+      throw new Error("Password must be at least 6 characters.");
+    }
+
+    // Check if user already exists
+    const { data: existing, error: lookupError } = await supabase
+      .from("app_users")
+      .select("id")
+      .eq("username", cleanUsername)
+      .maybeSingle();
+
+    if (lookupError && lookupError.code !== "PGRST116") {
+      throw new Error(lookupError.message || "Unable to check account.");
+    }
+
+    if (existing) {
+      throw new Error("Username already exists.");
+    }
+
+    // Create new user
+    const { error: insertError } = await supabase
+      .from("app_users")
+      .insert({
+        username: cleanUsername,
+        password_hash: await hashPassword(cleanPassword),
+        portal: cleanRole,
+        name: cleanName,
+      });
+
+    if (insertError) {
+      throw new Error(insertError.message || "Unable to create account.");
+    }
+
+    // Sign in after successful signup
     const nextUser = {
-      id: cleanPhone,
-      uid: cleanPhone,
+      id: cleanUsername,
+      username: cleanUsername,
       name: cleanName,
-      identifier: cleanPhone,
     };
 
     setUser(nextUser);
-    setPortal(cleanPortal);
+    setPortal(cleanRole);
     setProfile(
       buildSessionProfile({
-        phone: cleanPhone,
-        portal: cleanPortal,
+        username: cleanUsername,
+        portal: cleanRole,
         name: cleanName,
-        locationLabel: cleanLocationLabel,
-        farmSize: cleanFarmSize,
-        mainCrop: cleanMainCrop,
-        meta,
+        role: cleanRole,
+        meta: null,
       }),
     );
     writeSession({
-      phone: cleanPhone,
-      portal: cleanPortal,
+      username: cleanUsername,
+      role: cleanRole,
       name: cleanName,
-      locationLabel: cleanLocationLabel,
-      farmSize: cleanFarmSize,
-      mainCrop: cleanMainCrop,
-      meta: meta || null,
+      meta: null,
     });
 
-    return { phone: cleanPhone, portal: cleanPortal };
+    return { username: cleanUsername, role: cleanRole };
+  }
+
+  async function signIn({ username, password, role }) {
+    const cleanUsername = String(username || "").trim();
+    const cleanPassword = String(password || "").trim();
+    const cleanRole = String(role || "").trim();
+
+    if (!cleanUsername || !cleanPassword || !cleanRole) {
+      throw new Error("Username, password, and role are required.");
+    }
+
+    // Verify user exists and get stored hash
+    const { data: user, error: lookupError } = await supabase
+      .from("app_users")
+      .select("username, password_hash, name, portal")
+      .eq("username", cleanUsername)
+      .maybeSingle();
+
+    if (lookupError) {
+      throw new Error(lookupError.message || "Unable to verify account.");
+    }
+
+    if (!user) {
+      throw new Error("Username or password is incorrect.");
+    }
+
+    // Verify password
+    const passwordMatch = await verifyPassword(cleanPassword, user.password_hash);
+    if (!passwordMatch) {
+      throw new Error("Username or password is incorrect.");
+    }
+
+    const nextUser = {
+      id: cleanUsername,
+      username: cleanUsername,
+      name: user.name || "User",
+    };
+
+    setUser(nextUser);
+    setPortal(cleanRole);
+    setProfile(
+      buildSessionProfile({
+        username: cleanUsername,
+        portal: cleanRole,
+        name: user.name,
+        role: cleanRole,
+        meta: null,
+      }),
+    );
+    writeSession({
+      username: cleanUsername,
+      role: cleanRole,
+      name: user.name,
+      meta: null,
+    });
+
+    return { username: cleanUsername, role: cleanRole };
+  }
+
+  async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  async function verifyPassword(password, hash) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const computedHash = Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return computedHash === hash;
   }
 
   function updateSession(partial) {
@@ -148,7 +245,8 @@ export function AuthProvider({ children }) {
       portal,
       loading,
       isAuthenticated: Boolean(user?.id),
-      signInWithOtp,
+      signUp,
+      signIn,
       updateSession,
       signOut,
     }),
