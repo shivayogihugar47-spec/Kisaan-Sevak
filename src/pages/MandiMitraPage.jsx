@@ -4,7 +4,7 @@ import {
   ChevronRight, Droplets, Flame, Leaf, MapPin, Phone, Search as SearchIcon,
   ShieldCheck, Sprout, Sun, Wheat, X
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Header from "../components/Header";

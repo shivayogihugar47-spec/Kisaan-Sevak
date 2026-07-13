@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { getTranslation, supportedLanguages } from "../i18n/translations";
 
 const STORAGE_KEY = "kisaan-sevak-language";

@@ -62,7 +62,7 @@ export async function listAuctionsSource() {
 
   if (remote?.ok) {
     writeJson(AUCTIONS_KEY, remote.data || [], { emit: false });
-    return { source: "supabase", data: remote.data };
+    return { source: "neon", data: remote.data };
   }
   return { source: "local", data: listAuctions(), error: remote?.error };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Edit3, MapPin, Phone, Sprout, Tractor } from "lucide-react";
 import DashboardShell from "../components/DashboardShell";
@@ -598,4 +598,3 @@ function StatPill({ icon: Icon, label, value }) {
     </div>
   );
 }
-

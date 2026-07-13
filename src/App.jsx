@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Menu, Leaf } from "lucide-react";
 
@@ -17,7 +17,6 @@ import FarmerProfilePage from "./pages/FarmerProfilePage";
 
 // Advanced Ecosystem Pages
 import KrishiKiraya from "./pages/KrishiKiraya";
-import SoilNutrition from "./pages/SoilNutrition";
 import AgriInsure from "./pages/AgriInsure";
 
 // Role-Based Admin & Enterprise Pages
@@ -98,7 +97,6 @@ export default function App() {
             <Route path="/network" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><KisaanNetworkPage /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><ChatPage /></ProtectedRoute>} />
             <Route path="/rentals" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><KrishiKiraya /></ProtectedRoute>} />
-            <Route path="/nutrition" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><SoilNutrition /></ProtectedRoute>} />
             <Route path="/insurance" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><AgriInsure /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute allowedRoles={['farmer', 'seller']}><FarmerProfilePage /></ProtectedRoute>} />
 

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     MapPin, Droplets, CloudRain, Sun, Store, FileText,
     Users, Recycle, Volume2, ChevronRight, Zap

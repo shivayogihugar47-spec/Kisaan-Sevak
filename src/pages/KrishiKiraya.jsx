@@ -5,7 +5,7 @@ import {
   AlertCircle, CheckCircle, Clock, Loader, Upload, Image as ImageIcon,
   Phone, Home, Navigation, Bell, BellRing,
 } from "lucide-react";
-import { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import EmptyState from "../components/EmptyState";
 import Header from "../components/Header";
 import PageWrapper from "../components/PageWrapper";

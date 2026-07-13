@@ -1,5 +1,5 @@
-﻿import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { supabase } from "../lib/supabase";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { requestJson } from "../lib/api";
 
 const AuthContext = createContext(null);
 const SESSION_STORAGE_KEY = "kisaan-sevak-session";
@@ -25,13 +25,15 @@ function clearSession() {
   }
 }
 
-function buildSessionProfile({ username, portal, name, role, meta }) {
+function buildSessionProfile({ username, portal, name, role, meta, phone }) {
   const cleanName = String(name || "").trim() || "User";
   return {
     id: username,
     username,
     name: cleanName,
     role: role || portal,
+    portal: portal || role || "",
+    phone: String(phone || "").trim(),
     meta: meta || null,
   };
 }
@@ -49,6 +51,7 @@ export function AuthProvider({ children }) {
         id: session.username,
         username: session.username,
         name: session?.name || "User",
+        phone: session?.phone || "",
       };
       setUser(nextUser);
       setPortal(session.role);
@@ -59,11 +62,48 @@ export function AuthProvider({ children }) {
           name: session?.name,
           role: session.role,
           meta: session?.meta,
+          phone: session?.phone,
         }),
       );
     }
     setLoading(false);
   }, []);
+
+  function applySession({ username, role, name, phone, meta }) {
+    const cleanUsername = String(username || "").trim();
+    const cleanRole = String(role || "").trim();
+    const cleanName = String(name || "").trim() || "User";
+    const cleanPhone = String(phone || "").trim();
+
+    const nextUser = {
+      id: cleanUsername,
+      username: cleanUsername,
+      name: cleanName,
+      phone: cleanPhone,
+    };
+
+    setUser(nextUser);
+    setPortal(cleanRole);
+    setProfile(
+      buildSessionProfile({
+        username: cleanUsername,
+        portal: cleanRole,
+        name: cleanName,
+        role: cleanRole,
+        meta: meta || null,
+        phone: cleanPhone,
+      }),
+    );
+    writeSession({
+      username: cleanUsername,
+      role: cleanRole,
+      name: cleanName,
+      phone: cleanPhone,
+      meta: meta || null,
+    });
+
+    return { username: cleanUsername, role: cleanRole, name: cleanName, phone: cleanPhone };
+  }
 
   async function signUp({ username, password, name, role }) {
     const cleanUsername = String(username || "").trim();
@@ -79,61 +119,25 @@ export function AuthProvider({ children }) {
       throw new Error("Password must be at least 6 characters.");
     }
 
-    // Check if user already exists
-    const { data: existing, error: lookupError } = await supabase
-      .from("app_users")
-      .select("id")
-      .eq("username", cleanUsername)
-      .maybeSingle();
-
-    if (lookupError && lookupError.code !== "PGRST116") {
-      throw new Error(lookupError.message || "Unable to check account.");
-    }
-
-    if (existing) {
-      throw new Error("Username already exists.");
-    }
-
-    // Create new user
-    const { error: insertError } = await supabase
-      .from("app_users")
-      .insert({
+    const response = await requestJson("/api/auth-account", {
+      method: "POST",
+      body: JSON.stringify({
+        mode: "signup",
         username: cleanUsername,
-        password_hash: await hashPassword(cleanPassword),
-        portal: cleanRole,
-        name: cleanName,
-      });
-
-    if (insertError) {
-      throw new Error(insertError.message || "Unable to create account.");
-    }
-
-    // Sign in after successful signup
-    const nextUser = {
-      id: cleanUsername,
-      username: cleanUsername,
-      name: cleanName,
-    };
-
-    setUser(nextUser);
-    setPortal(cleanRole);
-    setProfile(
-      buildSessionProfile({
-        username: cleanUsername,
-        portal: cleanRole,
+        password: cleanPassword,
         name: cleanName,
         role: cleanRole,
-        meta: null,
       }),
-    );
-    writeSession({
-      username: cleanUsername,
-      role: cleanRole,
-      name: cleanName,
-      meta: null,
     });
 
-    return { username: cleanUsername, role: cleanRole };
+    const account = response?.data;
+    return applySession({
+      username: account?.username || cleanUsername,
+      role: account?.portal || cleanRole,
+      name: account?.name || cleanName,
+      phone: account?.phone || "",
+      meta: null,
+    });
   }
 
   async function signIn({ username, password, role }) {
@@ -145,71 +149,52 @@ export function AuthProvider({ children }) {
       throw new Error("Username, password, and role are required.");
     }
 
-    // Verify user exists and get stored hash
-    const { data: user, error: lookupError } = await supabase
-      .from("app_users")
-      .select("username, password_hash, name, portal")
-      .eq("username", cleanUsername)
-      .maybeSingle();
-
-    if (lookupError) {
-      throw new Error(lookupError.message || "Unable to verify account.");
-    }
-
-    if (!user) {
-      throw new Error("Username or password is incorrect.");
-    }
-
-    // Verify password
-    const passwordMatch = await verifyPassword(cleanPassword, user.password_hash);
-    if (!passwordMatch) {
-      throw new Error("Username or password is incorrect.");
-    }
-
-    const nextUser = {
-      id: cleanUsername,
-      username: cleanUsername,
-      name: user.name || "User",
-    };
-
-    setUser(nextUser);
-    setPortal(cleanRole);
-    setProfile(
-      buildSessionProfile({
+    const response = await requestJson("/api/auth-account", {
+      method: "POST",
+      body: JSON.stringify({
+        mode: "signin",
         username: cleanUsername,
-        portal: cleanRole,
-        name: user.name,
+        password: cleanPassword,
         role: cleanRole,
-        meta: null,
       }),
-    );
-    writeSession({
-      username: cleanUsername,
-      role: cleanRole,
-      name: user.name,
-      meta: null,
     });
 
-    return { username: cleanUsername, role: cleanRole };
+    const account = response?.data;
+    return applySession({
+      username: account?.username || cleanUsername,
+      role: account?.portal || cleanRole,
+      name: account?.name || "User",
+      phone: account?.phone || "",
+      meta: null,
+    });
   }
 
-  async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    return Array.from(new Uint8Array(hashBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-  }
+  async function completeProfile({ name, role }) {
+    const currentUsername = String(user?.username || profile?.username || "").trim();
+    const cleanRole = String(role || "").trim();
+    const cleanName = String(name || "").trim() || "User";
 
-  async function verifyPassword(password, hash) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const computedHash = Array.from(new Uint8Array(hashBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    return computedHash === hash;
+    if (!currentUsername || !cleanRole) {
+      throw new Error("Missing profile details.");
+    }
+
+    const response = await requestJson("/api/auth-profile", {
+      method: "PATCH",
+      body: JSON.stringify({
+        username: currentUsername,
+        name: cleanName,
+        role: cleanRole,
+      }),
+    });
+
+    const account = response?.data;
+    return applySession({
+      username: account?.username || currentUsername,
+      role: account?.portal || cleanRole,
+      name: account?.name || cleanName,
+      phone: account?.phone || "",
+      meta: null,
+    });
   }
 
   function updateSession(partial) {
@@ -247,6 +232,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user?.id),
       signUp,
       signIn,
+      completeProfile,
       updateSession,
       signOut,
     }),

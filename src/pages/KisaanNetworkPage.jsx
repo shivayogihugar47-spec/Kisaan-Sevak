@@ -3,7 +3,7 @@ import {
   Heart, MessageCircle, Share2, X, Plus, Camera,
   Edit2, Trash2, MoreVertical,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import EmptyState from "../components/EmptyState";

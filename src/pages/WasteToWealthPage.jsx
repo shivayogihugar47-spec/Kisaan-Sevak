@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Award, CheckCircle2, Clock, DollarSign, Gavel, Leaf, Loader2, ShoppingCart, TrendingUp } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import EmptyState from "../components/EmptyState";

@@ -24,7 +24,6 @@ export default function Sidebar({ isOpen, onClose }) {
   // Advanced Tech Items
   const advancedItems = [
     { path: "/rentals", label: content.sidebar.krishiKiraya, icon: Tractor },
-    { path: "/nutrition", label: content.sidebar.soilNutrition, icon: TestTube },
     { path: "/insurance", label: content.sidebar.agriInsurance, icon: ShieldCheck },
     { path: "/chat", label: content.chat.title, icon: MessageCircle },
   ];

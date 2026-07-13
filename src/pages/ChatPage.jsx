@@ -1,5 +1,5 @@
 import { Mic, SendHorizontal, Sparkles, User, Bot, ChevronDown, MoreVertical, Globe, Copy, Trash2, Heart, Download, RotateCcw, Settings, MessageCircle, TrendingUp, Zap } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Button from "../components/Button";
 import Header from "../components/Header";
 import PageWrapper from "../components/PageWrapper";

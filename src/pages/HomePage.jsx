@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { ArrowRight, Leaf, Store } from "lucide-react";
 import { useAuth } from "../context/AuthContext";

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -404,15 +404,6 @@ export default function Dashboard() {
                 desc={t.featured.insuranceDesc}
                 icon={ShieldCheck}
                 color="bg-indigo-600"
-                button={t.featured.learnMore}
-              />
-              <PromotionalCard
-                to="/nutrition"
-                sub={t.featured.nutritionSub}
-                title={t.featured.nutritionTitle}
-                desc={t.featured.nutritionDesc}
-                icon={Droplets}
-                color="bg-emerald-600"
                 button={t.featured.learnMore}
               />
             </div>
