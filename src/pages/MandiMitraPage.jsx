@@ -605,9 +605,9 @@ export default function MandiMitraPage() {
               </div>
               <div className="p-6 md:p-7">
                 {!loading && historicalData.length > 0 ? (
-                  <div className="h-52 w-full md:h-60">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={historicalData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <div className="h-52 w-full min-w-[280px] md:h-60">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={208}>
+                      <LineChart data={historicalData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />

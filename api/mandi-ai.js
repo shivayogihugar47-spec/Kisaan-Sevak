@@ -41,7 +41,7 @@ async function callLLM({ provider, endpoint, apiKey, model, systemPrompt, userMe
   };
   if (provider === "openrouter") {
     headers["HTTP-Referer"] = "https://kisaan-sevak.app";
-    headers["X-Title"] = "Kisaan Sevak — Mandi AI";
+    headers["X-Title"] = "Kisaan Sevak - Mandi AI";
   }
 
   const payload = {

@@ -74,7 +74,7 @@ async function callLLMForInsight(systemPrompt, userPrompt) {
         Authorization: `Bearer ${openrouterKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": "https://kisaan-sevak.app",
-        "X-Title": "Kisaan Sevak — Mandi Insight",
+        "X-Title": "Kisaan Sevak - Mandi Insight",
       },
     });
   }
@@ -286,41 +286,23 @@ const detectTrendFromMultipleRecords = (records) => {
 
 export const getMandiPricesWithHistory = async (crop, state, district) => {
   try {
-    const apiCrop = AGMARKNET_COMMODITY_NAMES[crop] || crop;
+    const url = `/api/mandi-prices?crop=${encodeURIComponent(crop)}&state=${encodeURIComponent(state || "")}&district=${encodeURIComponent(district || "")}&limit=10`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+    });
 
-    let url = `https://api.data.gov.in/resource/${RESOURCE_ID}?api-key=${GOVT_API_KEY}&format=json&filters[state]=${encodeURIComponent(state)}&filters[commodity]=${encodeURIComponent(apiCrop)}&limit=10`;
-    let response = await fetch(url);
-    let result = await response.json();
-    let records = result?.records || [];
-
-    if (records.length === 0) {
-      url = `https://api.data.gov.in/resource/${RESOURCE_ID}?api-key=${GOVT_API_KEY}&format=json&filters[commodity]=${encodeURIComponent(apiCrop)}&limit=10`;
-      response = await fetch(url);
-      result = await response.json();
-      records = result?.records || [];
+    if (!response.ok) {
+      throw new Error(`mandi-prices proxy returned ${response.status}`);
     }
 
+    const payload = await response.json();
+    const records = payload?.data || [];
+
     if (records.length > 0) {
-      const formattedData = records.slice(0, 5).map(r => {
-        const isLocal = (r.district || "").toLowerCase().includes((district || "").toLowerCase().substring(0, 5));
-        return {
-          commodity: r.commodity,
-          state: r.state,
-          district: r.district,
-          market: r.market,
-          minPrice: Number(r.min_price),
-          maxPrice: Number(r.max_price),
-          modalPrice: Number(r.modal_price) || Number(r.max_price) || 0,
-          arrivalDate: r.arrival_date,
-          isLiveGovtData: true,
-          distance: isLocal ? "Local Mandi" : `${r.district} Mandi`,
-        };
-      });
-
-      const validData = formattedData.filter(d => d.modalPrice > 0);
-
+      const validData = records.filter(d => Number(d.modalPrice) > 0);
       if (validData.length > 0) {
-        const currentModalPrice = validData[0].modalPrice;
+        const currentModalPrice = Number(validData[0].modalPrice);
         const trendBias = detectTrendFromMultipleRecords(validData);
         const history = generateHistoryFromRealPrice(currentModalPrice, trendBias);
 
@@ -347,48 +329,24 @@ export const getMandiLiveRecords = async (
   district,
   { nationalFallback = true, limit = 10 } = {},
 ) => {
-  const apiCrop = AGMARKNET_COMMODITY_NAMES[crop] || crop;
+  const url = `/api/mandi-prices?crop=${encodeURIComponent(crop)}&state=${encodeURIComponent(state || "")}&district=${encodeURIComponent(district || "")}&limit=${Number(limit) || 10}&nationalFallback=${nationalFallback ? "true" : "false"}`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: { "Accept": "application/json" },
+  });
 
-  let url = `https://api.data.gov.in/resource/${RESOURCE_ID}?api-key=${GOVT_API_KEY}&format=json&filters[state]=${encodeURIComponent(state)}&filters[commodity]=${encodeURIComponent(apiCrop)}&limit=${Number(limit) || 10}`;
-  let response = await fetch(url);
-  let result = await response.json();
-  let records = result?.records || [];
-
-  if (nationalFallback && records.length === 0) {
-    url = `https://api.data.gov.in/resource/${RESOURCE_ID}?api-key=${GOVT_API_KEY}&format=json&filters[commodity]=${encodeURIComponent(apiCrop)}&limit=${Number(limit) || 10}`;
-    response = await fetch(url);
-    result = await response.json();
-    records = result?.records || [];
+  if (!response.ok) {
+    throw new Error(`mandi-prices proxy returned ${response.status}`);
   }
-
+  const payload = await response.json();
+  const records = payload?.data || [];
   if (!records.length) {
     throw new Error("No genuine active trades found.");
   }
-
-  const formatted = records.map((r) => {
-    const isLocal = String(r.district || "")
-      .toLowerCase()
-      .includes(String(district || "").toLowerCase().substring(0, 5));
-
-    return {
-      commodity: r.commodity,
-      state: r.state,
-      district: r.district,
-      market: r.market,
-      minPrice: Number(r.min_price),
-      maxPrice: Number(r.max_price),
-      modalPrice: Number(r.modal_price) || Number(r.max_price) || 0,
-      arrivalDate: r.arrival_date,
-      isLiveGovtData: true,
-      distance: isLocal ? "Local Mandi" : `${r.district} Mandi`,
-    };
-  });
-
-  const valid = formatted.filter((d) => d.modalPrice > 0);
+  const valid = records.filter((d) => Number(d.modalPrice) > 0);
   if (!valid.length) {
     throw new Error("No genuine valid price records found.");
   }
-
   return valid;
 };
 
