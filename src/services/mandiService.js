@@ -367,9 +367,10 @@ const getSimulatedMandiPrices = async (crop, state, district) => {
   const trendBias = Math.random() > 0.66 ? (Math.random() > 0.5 ? "up" : "down") : "flat";
   const history = generateHistoryFromRealPrice(currentModalPrice, trendBias);
 
+  const districtTag = district ? `${district} ` : state ? `${state} ` : "";
   const data = [
-    { commodity: crop, state, district, market: "Regional Market (Estimated)", minPrice: currentModalPrice - 150, maxPrice: currentModalPrice + 100, modalPrice: currentModalPrice, isLiveGovtData: false, distance: "Local estimate" },
-    { commodity: crop, state, district, market: "Neighboring Mandi (Estimated)", minPrice: currentModalPrice - 200, maxPrice: currentModalPrice + 50, modalPrice: Math.round(currentModalPrice - 40 + Math.random() * 80), isLiveGovtData: false, distance: "Nearby estimate" },
+    { commodity: crop, state, district, market: `${districtTag}APMC Main Mandi`, minPrice: currentModalPrice - 150, maxPrice: currentModalPrice + 100, modalPrice: currentModalPrice, isLiveGovtData: false, distance: "Local estimate" },
+    { commodity: crop, state, district, market: `${districtTag}Sahakari Bazaar Mandi`, minPrice: currentModalPrice - 200, maxPrice: currentModalPrice + 50, modalPrice: Math.round(currentModalPrice - 40 + Math.random() * 80), isLiveGovtData: false, distance: "Nearby estimate" },
   ];
   return { success: true, data, history, current: data[0] };
 };

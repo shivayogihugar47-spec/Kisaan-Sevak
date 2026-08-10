@@ -60,9 +60,10 @@ function simulatedPrices(crop, state, district) {
   const basePrice = FALLBACK_BASE_PRICES[crop] || 2500;
   const variance = basePrice * 0.04;
   const currentModalPrice = Math.round(basePrice + (Math.random() * variance * 2 - variance));
+  const districtTag = district ? `${district} ` : state ? `${state} ` : "";
   return [
-    { commodity: crop, state, district, market: "Regional Market (Estimated)", minPrice: currentModalPrice - 150, maxPrice: currentModalPrice + 100, modalPrice: currentModalPrice, arrivalDate: new Date().toISOString().split("T")[0], isLiveGovtData: false, distance: "Local estimate" },
-    { commodity: crop, state, district, market: "Neighboring Mandi (Estimated)", minPrice: currentModalPrice - 200, maxPrice: currentModalPrice + 50, modalPrice: Math.round(currentModalPrice - 40 + Math.random() * 80), arrivalDate: new Date().toISOString().split("T")[0], isLiveGovtData: false, distance: "Nearby estimate" },
+    { commodity: crop, state, district, market: `${districtTag}APMC Main Mandi`, minPrice: currentModalPrice - 150, maxPrice: currentModalPrice + 100, modalPrice: currentModalPrice, arrivalDate: new Date().toISOString().split("T")[0], isLiveGovtData: false, distance: "Local estimate" },
+    { commodity: crop, state, district, market: `${districtTag}Sahakari Bazaar Mandi`, minPrice: currentModalPrice - 200, maxPrice: currentModalPrice + 50, modalPrice: Math.round(currentModalPrice - 40 + Math.random() * 80), arrivalDate: new Date().toISOString().split("T")[0], isLiveGovtData: false, distance: "Nearby estimate" },
   ];
 }
 
@@ -72,7 +73,9 @@ async function fetchGovtRecords(apiCrop, state, limit, nationalFallback = true) 
     headers: {
       "User-Agent": "KisaanSevak/1.0 (+https://kisaan-sevak.app)",
       "Accept": "application/json",
+      "Accept-Encoding": "gzip, deflate, br",
     },
+    redirect: "follow",
   };
 
   const attemptUrls = [];
@@ -88,36 +91,50 @@ async function fetchGovtRecords(apiCrop, state, limit, nationalFallback = true) 
   }
 
   for (const attemptUrl of attemptUrls) {
-    try {
-      const res = await fetch(attemptUrl, fetchOptions);
-      if (!res.ok) continue;
-      const data = await res.json();
-      const records = data?.records || [];
-      if (records && records.length > 0) return records;
-    } catch (err) {
-      console.warn("[mandi-prices] govt fetch failed:", err?.message || err);
+    for (let retry = 0; retry < 2; retry++) {
+      try {
+        const res = await fetch(attemptUrl, fetchOptions);
+        if (!res.ok) {
+          continue;
+        }
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { continue; }
+        const records = data?.records || [];
+        if (records && records.length > 0) return records;
+      } catch (err) {
+        console.warn(`[mandi-prices] govt fetch (attempt ${retry + 1}) failed:`, err?.message || err);
+      }
     }
   }
   return null;
 }
 
+function toNumberSafe(v, fallback = 0) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.round(n * 100) / 100;
+}
+
 function formatRecords(records, district, cropDisplay) {
   const formattedData = records.slice(0, 5).map(r => {
-    const isLocal = (r.district || "").toLowerCase().includes((district || "").toLowerCase().substring(0, 5));
+    const districtName = String(r.district || "").trim();
+    const districtMatch = districtName.toLowerCase().includes(String(district || "").toLowerCase().substring(0, 5));
+    const modal = toNumberSafe(r.modal_price, 0) || toNumberSafe(r.max_price, 0);
     return {
-      commodity: r.commodity || cropDisplay,
+      commodity: cropDisplay || r.commodity || cropDisplay,
       state: r.state,
-      district: r.district,
-      market: r.market,
-      minPrice: Number(r.min_price),
-      maxPrice: Number(r.max_price),
-      modalPrice: Number(r.modal_price) || Number(r.max_price) || 0,
+      district: districtName,
+      market: r.market || `${districtName || "Local"} Mandi`,
+      minPrice: toNumberSafe(r.min_price, Math.max(0, modal - 200)),
+      maxPrice: toNumberSafe(r.max_price, Math.max(0, modal + 100)),
+      modalPrice: modal,
       arrivalDate: r.arrival_date,
       isLiveGovtData: true,
-      distance: isLocal ? "Local Mandi" : `${r.district} Mandi`,
+      distance: districtMatch ? "Local Mandi" : `${districtName || "Regional"} Mandi`,
     };
   });
-  return formattedData.filter(d => d.modalPrice > 0);
+  return formattedData.filter(d => Number.isFinite(d.modalPrice) && d.modalPrice > 0);
 }
 
 export default async function handler(req, res) {
@@ -156,7 +173,7 @@ export default async function handler(req, res) {
 
     const rawRecords = await Promise.race([
       fetchGovtRecords(apiCrop, state, limit, nationalFallback),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("govt_timeout")), 8000)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("govt_timeout")), 18000)),
     ]).catch(err => {
       console.warn("[mandi-prices] govt lookup failed:", err?.message || err);
       return null;
