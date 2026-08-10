@@ -1,5 +1,3 @@
-import url from "url";
-
 const GOVT_API_KEY = process.env.GOVT_DATA_API_KEY || "579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b";
 const RESOURCE_ID = "9ef84268-d588-465a-a308-a864a43d0070";
 
@@ -89,9 +87,9 @@ async function fetchGovtRecords(apiCrop, state, limit, nationalFallback = true) 
     );
   }
 
-  for (const url of attemptUrls) {
+  for (const attemptUrl of attemptUrls) {
     try {
-      const res = await fetch(url, fetchOptions);
+      const res = await fetch(attemptUrl, fetchOptions);
       if (!res.ok) continue;
       const data = await res.json();
       const records = data?.records || [];
@@ -136,12 +134,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const parsed = url.parse(req.url, true);
-    const crop = String(parsed.query?.crop || "").trim();
-    const state = String(parsed.query?.state || "").trim();
-    const district = String(parsed.query?.district || "").trim();
-    const limit = Number(parsed.query?.limit) || 10;
-    const nationalFallback = parsed.query?.nationalFallback !== "false";
+    const crop = String(req.query?.crop || "").trim();
+    const state = String(req.query?.state || "").trim();
+    const district = String(req.query?.district || "").trim();
+    const limit = Number(req.query?.limit) || 10;
+    const nationalFallback = req.query?.nationalFallback !== "false";
 
     if (!crop) {
       res.status(400).json({ ok: false, message: "crop is required" });

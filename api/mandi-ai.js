@@ -1,3 +1,5 @@
+import { readJsonBody } from "./_lib/neon.js";
+
 const DEFAULT_SYSTEM_PROMPT = `You are Kisaan Sevak AI — an expert agricultural market advisor for Indian farmers. You speak in a warm, practical, farmer-friendly tone.
 
 Return STRICT valid JSON with these exact fields (no markdown, no code blocks, no extra text):
@@ -99,7 +101,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    const body = readJsonBody(req);
     const crop = String(body?.crop || "crop").trim();
     const price = Number(body?.price || 0);
     const trend = String(body?.trend || "flat").trim();
