@@ -12,15 +12,15 @@ import { sendChatRequest } from "../services/chatservice";
 const T = {
   en: {
     title: "Kisaan AI", 
-    subtitle: "Your Personal Farming Advisor",
-    initialMessage: "Namaste! 🌾 I'm your Kisaan AI - your personal farming advisor. Ask me about crops, weather, soil, market prices, or any farming challenge. I'm here to help you succeed!",
-    placeholder: "What farming challenge can I help you with today?", 
+    subtitle: "Smart Agriculture Advisor for prices, crops, soil, and market insights",
+    initialMessage: "Namaste! 🌾 I am your Kisaan AI agriculture advisor. Ask me about market prices, crop planning, soil health, pest control, or farm economics. I will answer in a structured and practical way using the latest available knowledge.",
+    placeholder: "Ask about crop prices, soil advice, market trends or any farming question...", 
     voiceInput: "Voice Input",
-    suggested: "RECOMMENDED QUERIES",
+    suggested: "ASK FOR AGRICULTURE INSIGHT",
     suggestions: [
-      { id: 'weather', label: "Rain forecast for Belgaum", icon: '🌧️' },
-      { id: 'market', label: "Wheat price trends", icon: '📈' },
-      { id: 'disease', label: "Identify leaf spots", icon: '🍃' }
+      { id: 'market', label: "What are current wheat mandi prices?", icon: '📈' },
+      { id: 'crop', label: "Which crop is best for the next rain season?", icon: '🌾' },
+      { id: 'soil', label: "How to improve soil nitrogen in paddy fields?", icon: '🧪' }
     ],
     clearChat: "Clear Chat",
     copy: "Copy",
@@ -30,8 +30,10 @@ const T = {
     resetChat: "Reset Conversation",
     messageCount: "Messages",
     copied: "Copied!",
+    suggestedLabel: "Try questions like",
+    tip: "Share your crop, region and season for the best answer.",
     responses: {
-      fallback: "I am analyzing your query with our precision agri-models. Could you specify the crop variety for a more accurate diagnosis?"
+      fallback: "I am processing your agriculture query. Please provide any local context like crop, region, or season to improve the recommendation."
     }
   },
   hi: {
@@ -90,7 +92,14 @@ export default function ChatPage() {
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState([
+    {
+      id: `INIT-${language}`,
+      sender: "ai",
+      text: t.initialMessage,
+      time: getCurrentTimeLabel(content?.locale || 'en-IN')
+    }
+  ]);
   const [draft, setDraft] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
@@ -145,7 +154,7 @@ export default function ChatPage() {
         time: getCurrentTimeLabel(content?.locale || 'en-IN') 
       }
     ]);
-  }, [language]); // Depend on language specifically
+  }, [language]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -222,16 +231,24 @@ export default function ChatPage() {
       }));
       
       const systemPrompts = {
-         en: "You MUST respond ONLY with 4-5 bullet points. Format: - Point 1\n- Point 2\n- Point 3. NO other text. NO paragraphs. NO sentences. ONLY bullet points with dashes. Each bullet is one short line. CRITICAL: Start with dash (-) for every line. Stop after 5 bullets.",
-         hi: "आप ONLY 4-5 बुलेट्स में देंगे। फॉर्मेट: - बुलेट 1\n- बुलेट 2\n- बुलेट 3। कुछ और नहीं। ONLY डैश से शुरू करें। हर लाइन एक छोटी। 5 के बाद रोकें।",
-         kn: "ನೀವು ONLY 4-5 ಬುಲೆಟ್ಚಲಿ ಉತ್ತರ ಕೊಡಿ। ಫಾರ್ಮೆಟ್: - ಬುಲೆಟ್ 1\n- ಬುಲೆಟ್ 2\n- ಬುಲೆಟ್ 3। ಬೇರೆ ಕಾಣ್ಠ ಇಲ್ಲ। ONLY ಡ್ಯಾಶ್ ಪ್ರಾರಂಭ ಮಾಡಿ।"
-      }[language] || "RESPOND ONLY: 4-5 bullet points. Format: - Point. NO other text.";
+         en: "You are an expert agriculture advisor. Answer all questions about farming, market prices, crop choice, soil health, pest control, weather, and agro-economics. Use the latest available knowledge and assume you can research the internet for current information. Provide answers in a structured way with clear headings, short paragraphs, and bullet lists when appropriate. Include sections such as 'Key insights', 'Recommendations', and 'Next steps'. Keep the tone practical and focused on action.",
+         hi: "आप एक विशेषज्ञ कृषि सलाहकार हैं। खेती, बाजार की कीमतें, फसल चयन, मिट्टी की सेहत, कीट नियंत्रण, मौसम और कृषि अर्थव्यवस्था के बारे में सभी प्रश्नों का उत्तर दें। नवीनतम जानकारी का उपयोग करें और मान लें कि आप इंटरनेट पर वर्तमान जानकारी खोज सकते हैं। स्पष्ट शीर्षक, छोटे पैराग्राफ और आवश्यक होने पर बुलेट सूची के साथ संरचित उत्तर दें। 'मुख्य जानकारी', 'सिफारिशें', और 'अगले कदम' जैसे अनुभाग शामिल करें। स्वर व्यावहारिक और कार्रवाई-उन्मुख रखें।",
+         kn: "ನೀವು ಒಂದು ಪರಿಣಿತ ಕೃಷಿ ಸಲಹೆಗಾರರಾಗಿರುತ್ತೀರಿ. ಕೃಷಿ, ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳು, ಬೆಳೆ ಆಯ್ಕೆ, ಮಣ್ಣು ಆರೋಗ್ಯ, ಕೀಟ ನಿಯಂತ್ರಣ, ಹವಾಮಾನ ಮತ್ತು ಕೃಷಿ ಆರ್ಥಿಕಶಾಸ್ತ್ರದ ಕುರಿತು ಎಲ್ಲಾ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರ ನೀಡಿ. ಇತ್ತೀಚಿನ ಲಭ್ಯವಿರುವ ಜ್ಞಾನವನ್ನು ಬಳಸಿ ಮತ್ತು ನೀವು ಇಂಟರ್ನೆಟ್‌ನಲ್ಲಿ ಪ್ರಸ್ತುತ ಮಾಹಿತಿಯನ್ನು ಹುಡುಕಬಹುದು ಎಂದು ಪರಿಗಣಿಸಿ. ಸ್ಪಷ್ಟ ಶೀರ್ಷಿಕೆಗಳು, ಚಿಕ್ಕ ಪ್ರಬಂಧಗಳು ಮತ್ತು ಅಗತ್ಯವಾದಾಗ ಗುಂಡಿತ ಪ್ರಶ್ನೆಗಳೊಂದಿಗೆ ರಚನೆಗೊಳಿಸಿದ ಉತ್ತರಗಳನ್ನು ಒದಗಿಸಿ. 'ಪ್ರಮುಖ ಅಂಶಗಳು', 'ಶಿಫಾರಸುಗಳು', ಮತ್ತು 'ಮುಂದಿನ ಹೆಜ್ಜೆಗಳು' ಎಂಬ ವಿಭಾಗಗಳನ್ನು ಒಳಗೊಂಡಿರಲಿ. ಶೈಲಿ ಪ್ರಾಯೋಗಿಕ ಮತ್ತು ಕ್ರಿಯಾತ್ಮಕವಾಗಿರಲಿ."
+      }[language] || "You are an expert agriculture advisor. Answer all farming questions with structured, actionable guidance, using current knowledge and internet-style research. Include headings, bullets, and specific recommendations.";
 
       const apiMessages = [
         { role: 'system', content: systemPrompts[language] },
         ...history,
         { role: 'user', content: cleanText }
       ];
+
+      if (!history.length && !cleanText.toLowerCase().includes('price') && !cleanText.toLowerCase().includes('weather')) {
+        // encourage broad agricultural answers for first requests
+        apiMessages.unshift({
+          role: 'system',
+          content: 'Use internet-style research to answer with structured agriculture insights whenever possible, including price signals, market context, and practical farm actions.'
+        });
+      }
 
       const res = await sendChatRequest({ messages: apiMessages });
       const aiReply = res.reply;
@@ -246,207 +263,125 @@ export default function ChatPage() {
   };
 
   return (
-    <PageWrapper className="bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-50">
-      <div className="flex flex-col min-h-screen w-full">
-        
-        {/* Premium Header */}
-        <div className="sticky top-0 z-[60] bg-white/90 backdrop-blur-2xl border-b border-emerald-100 px-4 sm:px-8 py-3 sm:py-4 shadow-sm">
-           <div className="mx-auto max-w-5xl flex items-center justify-between gap-3 sm:gap-4">
-              <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-                 <div className="relative shrink-0">
-                    <div className="h-10 sm:h-12 w-10 sm:w-12 rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-300/50">
-                       <Sparkles size={24} />
-                    </div>
-                    <motion.div className="absolute -bottom-1 -right-1 h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-emerald-500 border-2 border-white animate-pulse" />
-                 </div>
-                 <div className="min-w-0 flex-1">
-                    <h1 className="text-lg sm:text-xl font-black text-slate-900 leading-tight truncate">{t.title}</h1>
-                    <p className="text-[9px] sm:text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{t.subtitle}</p>
-                 </div>
+    <PageWrapper className="bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-100 min-h-screen">
+      <div className="flex min-h-screen items-center justify-center px-4 py-10">
+        <div className="w-full max-w-6xl">
+          <div className="rounded-[32px] border border-slate-200 bg-white/95 shadow-2xl shadow-slate-200/80 overflow-hidden">
+            <div className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Kisaan AI</p>
+                <h1 className="mt-2 text-3xl font-black text-slate-900">Agriculture Chat Assistant</h1>
               </div>
-
-              <div className="hidden sm:flex items-center gap-1 sm:gap-2 shrink-0">
-                 {/* Stats */}
-                 <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-2xl border border-emerald-100 shrink-0">
-                    <MessageCircle size={14} className="text-emerald-600 shrink-0" />
-                    <span className="text-xs font-bold text-emerald-700 shrink-0">{messages.length - 1}</span>
-                 </div>
-
-                 {/* Language Switcher */}
-                 <button 
+              <div className="flex items-center gap-3">
+                <button 
                   onClick={() => setShowLangMenu(!showLangMenu)}
-                  className="flex items-center gap-1 px-2 sm:px-3 py-2 bg-emerald-700/10 rounded-xl border border-emerald-200 transition-all hover:bg-emerald-700/20 active:scale-95 text-emerald-700 shrink-0 whitespace-nowrap"
-                 >
-                    <Globe size={16} className="hidden sm:block shrink-0" />
-                    <span className="text-[10px] sm:text-xs font-black uppercase">{language}</span>
-                 </button>
-
-                 <AnimatePresence>
-                   {showLangMenu && (
-                     <motion.div 
-                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                      className="absolute top-12 sm:top-14 right-12 sm:right-20 bg-white rounded-2xl shadow-2xl border border-emerald-50 p-2 min-w-[110px] z-[70]"
-                     >
-                       <LangBtn active={language === 'en'} onClick={() => { setLanguage('en'); setShowLangMenu(false); }} label="English" />
-                       <LangBtn active={language === 'hi'} onClick={() => { setLanguage('hi'); setShowLangMenu(false); }} label="हिन्दी" />
-                       <LangBtn active={language === 'kn'} onClick={() => { setLanguage('kn'); setShowLangMenu(false); }} label="ಕನ್ನಡ" />
-                     </motion.div>
-                   )}
-                 </AnimatePresence>
-
-                 {/* Menu */}
-                 <motion.div className="relative">
-                   <button 
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  <Globe size={16} />
+                  <span className="uppercase">{language}</span>
+                </button>
+                <div className="relative">
+                  <button 
                     onClick={() => setShowMenu(!showMenu)}
-                    className="p-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all"
-                   >
-                     <MoreVertical size={18} />
-                   </button>
-
-                   <AnimatePresence>
-                     {showMenu && (
-                       <motion.div
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+                  <AnimatePresence>
+                    {showMenu && (
+                      <motion.div
                         initial={{ opacity: 0, y: 8, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                        className="absolute top-10 right-0 bg-white rounded-2xl shadow-2xl border border-slate-100 p-1 w-48 z-[70]"
-                       >
-                         <MenuBtn icon={<Download size={16} />} label={t.downloadChat} onClick={downloadChat} />
-                         <MenuBtn icon={<RotateCcw size={16} />} label={t.resetChat} onClick={clearChat} className="text-red-600" />
-                       </motion.div>
-                     )}
-                   </AnimatePresence>
-                 </motion.div>
+                        className="absolute right-0 top-12 z-50 w-48 rounded-3xl border border-slate-200 bg-white p-2 shadow-2xl"
+                      >
+                        <MenuBtn icon={<Download size={16} />} label={t.downloadChat} onClick={downloadChat} />
+                        <MenuBtn icon={<RotateCcw size={16} />} label={t.resetChat} onClick={clearChat} className="text-red-600" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
-           </div>
-        </div>
+            </div>
 
-        {/* Chat Canvas */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 sm:py-8 scroll-smooth pb-32 w-full">
-           <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
-              <AnimatePresence>
-              {messages.map((m, idx) => (
-                <motion.div
-                  key={m.id}
-                  initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className={`flex gap-2 sm:gap-4 group ${m.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-                  onMouseEnter={() => m.sender !== 'ai' || favorites.includes(m.id)}
-                >
-                  <div className={`shrink-0 h-8 sm:h-10 w-8 sm:w-10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm text-xs sm:text-base ${m.sender === 'user' 
-                    ? 'bg-slate-900 text-white' 
-                    : 'bg-white text-emerald-600 border-2 border-emerald-100'}`}>
-                    {m.sender === 'user' ? <User size={18} /> : <Bot size={18} />}
-                  </div>
-                  
-                  <div className={`flex flex-col max-w-full sm:max-w-2xl ${m.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                    <motion.div 
-                      className={`relative p-3 sm:p-5 rounded-2xl sm:rounded-3xl text-xs sm:text-sm font-medium leading-relaxed shadow-lg transition-all ${m.sender === 'user' 
-                        ? 'bg-emerald-700 text-white rounded-tr-none shadow-emerald-700/20' 
-                        : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none shadow-black/5'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                    >
-                      <FormattedMessage text={m.text} isUser={m.sender === 'user'} />
-                    </motion.div>
-                    
-                    <div className="flex items-center gap-1 sm:gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">{m.time}</span>
-                      
-                      {m.sender === 'ai' && (
-                        <div className="flex gap-0.5 sm:gap-1">
-                          <button 
-                            onClick={() => copyToClipboard(m.text, m.id)}
-                            className="p-1 sm:p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all text-xs sm:text-sm"
-                            title={t.copy}
-                          >
-                            {copiedId === m.id ? '✓' : <Copy size={14} />}
-                          </button>
-                          <button 
-                            onClick={() => toggleFavorite(m.id)}
-                            className={`p-1 sm:p-1.5 rounded-lg transition-all text-xs sm:text-sm ${favorites.includes(m.id) ? 'text-red-500 bg-red-50' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
-                            title={t.favorite}
-                          >
-                            {favorites.includes(m.id) ? <Heart size={14} fill="currentColor" /> : <Heart size={14} />}
-                          </button>
-                          <button 
-                            onClick={() => deleteMessage(m.id)}
-                            className="p-1 sm:p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all text-xs sm:text-sm"
-                            title={t.delete}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+            <div className="bg-slate-50 px-6 py-8 sm:px-8 sm:py-10">
+              <div className="mx-auto max-w-6xl">
+                <div className="rounded-[32px] bg-white px-6 py-6 shadow-sm border border-slate-200 min-h-[70vh]">
+                  <div className="space-y-6">
+                    <AnimatePresence>
+                      {messages.map((m, idx) => (
+                        <motion.div
+                          key={m.id}
+                          initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ delay: idx * 0.02 }}
+                          className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div className={`rounded-[28px] border px-6 py-5 text-sm leading-7 shadow-sm max-w-[95%] ${m.sender === 'user' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-900 border-slate-200'}`}>
+                            <FormattedMessage text={m.text} isUser={m.sender === 'user'} />
+                            <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">{m.time}</div>
+                          </div>
+                        </motion.div>
+                      ))}
+
+                      {isTyping && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-3xl bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-sm">
+                            <Bot size={18} />
+                          </div>
+                          <div className="rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-sm flex items-center gap-2">
+                            <div className="h-3 w-3 rounded-full bg-emerald-500 animate-bounce" />
+                            <div className="h-3 w-3 rounded-full bg-emerald-500 animate-bounce delay-150" />
+                            <div className="h-3 w-3 rounded-full bg-emerald-500 animate-bounce delay-300" />
+                          </div>
+                        </motion.div>
                       )}
-                    </div>
+                    </AnimatePresence>
+                    <div ref={messagesEndRef} />
                   </div>
-                </motion.div>
-              ))}
+                </div>
 
-              {isTyping && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4">
-                   <div className="shrink-0 h-10 w-10 rounded-2xl bg-white border-2 border-emerald-100 text-emerald-600 flex items-center justify-center">
-                     <Bot size={18} />
-                   </div>
-                   <div className="bg-white border-2 border-slate-200 px-4 sm:px-6 py-3 sm:py-4 rounded-3xl rounded-tl-none flex gap-2 shadow-lg">
-                      <motion.div className="h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-400 rounded-full" animate={{ y: [0, -8, 0] }} transition={{ duration: 0.6, repeat: Infinity }} />
-                      <motion.div className="h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-400 rounded-full" animate={{ y: [0, -8, 0] }} transition={{ duration: 0.6, delay: 0.2, repeat: Infinity }} />
-                      <motion.div className="h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-400 rounded-full" animate={{ y: [0, -8, 0] }} transition={{ duration: 0.6, delay: 0.4, repeat: Infinity }} />
-                   </div>
-                </motion.div>
-              )}
-           </AnimatePresence>
-              <div ref={messagesEndRef} />
-           </div>
-        </div>
+                <div className="mt-6 rounded-[34px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                  <form 
+                    className="flex flex-col gap-3 md:flex-row md:items-center"
+                    onSubmit={(e) => { e.preventDefault(); sendMessage(draft); }}
+                  >
+                    <input
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      placeholder={t.placeholder}
+                      maxLength={500}
+                      className="flex-1 rounded-3xl border border-slate-200 bg-slate-100 px-5 py-4 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                    />
 
-
-
-        {/* Intelligent Input Bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/95 to-transparent pt-4 pb-4 sm:pb-6 px-4">
-           <form 
-            className="mx-auto max-w-3xl bg-white/95 backdrop-blur-xl rounded-3xl border border-emerald-100 p-2 sm:p-3 pl-4 sm:pl-6 shadow-2xl flex items-center gap-2 pr-2"
-            onSubmit={(e) => { e.preventDefault(); sendMessage(draft); }}
-           >
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder={t.placeholder}
-                maxLength={500}
-                className="flex-1 bg-transparent py-3 sm:py-4 text-xs sm:text-sm font-bold text-slate-900 outline-none placeholder:text-slate-300"
-              />
-
-              <div className="flex items-center gap-1">
-                 <motion.button 
-                  type="button" 
-                  onClick={toggleVoiceInput}
-                  disabled={isTyping}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`h-10 sm:h-12 w-10 sm:w-12 flex items-center justify-center rounded-full transition-all text-sm sm:text-lg shrink-0 ${
-                    isListening 
-                      ? 'bg-red-500 text-white shadow-lg shadow-red-300 animate-pulse' 
-                      : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                  }`}
-                 >
-                    <Mic size={20} />
-                 </motion.button>
-                 <motion.button 
-                  type="submit"
-                  disabled={!draft.trim() || isTyping}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="h-12 sm:h-14 w-12 sm:w-14 bg-gradient-to-br from-emerald-600 to-teal-600 text-white rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-xl hover:shadow-2xl transition-all active:scale-95 disabled:grayscale disabled:opacity-50 shrink-0"
-                 >
-                    <SendHorizontal size={22} />
-                 </motion.button>
+                    <div className="flex items-center gap-3 md:ml-4">
+                      <button 
+                        type="button" 
+                        onClick={toggleVoiceInput}
+                        disabled={isTyping}
+                        className={`flex h-12 w-12 items-center justify-center rounded-3xl transition ${
+                          isListening 
+                            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-300 animate-pulse' 
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                        title={t.voiceInput}
+                      >
+                        <Mic size={20} />
+                      </button>
+                      <button 
+                        type="submit"
+                        disabled={!draft.trim() || isTyping}
+                        className="flex h-12 w-12 items-center justify-center rounded-3xl bg-emerald-600 text-white shadow-xl transition hover:bg-emerald-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <SendHorizontal size={22} />
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
-           </form>
+            </div>
+          </div>
         </div>
-
       </div>
     </PageWrapper>
   );

@@ -1,488 +1,507 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  BadgeDollarSign,
-  CheckCircle2,
-  FileCheck2,
-  LogOut,
-  ShieldCheck,
-  Trash2,
-  UserX,
-  Users,
-  Plus,
-  Edit,
-  Globe,
-  Search,
-  ChevronRight,
-  TrendingUp,
-  LayoutDashboard,
-  FileText,
-  Briefcase,
   AlertCircle,
-  Clock,
-  ExternalLink,
-  Filter,
-  X,
-  Check,
-  ArrowUpRight,
-  MoreVertical,
-  ChevronDown,
+  Building2,
+  CheckCircle2,
+  ChevronRight,
+  FileCheck2,
+  Gauge,
+  LayoutDashboard,
+  LogOut,
+  Search,
   Shield,
-  LineChart as LineChartIcon,
-  PieChart as PieChartIcon,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  CreditCard,
-  Building
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  TrendingUp,
+  Users,
+  X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import {
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Pie,
-  PieChart,
-  Cell
-} from "recharts";
+import { ResponsiveContainer, Tooltip, XAxis, YAxis, Area, AreaChart, Pie, PieChart, Cell } from "recharts";
 import PageWrapper from "../components/PageWrapper";
 import { useAuth } from "../context/AuthContext";
-import { supabase } from "../lib/supabase";
+import { requestJson } from "../lib/api";
+import { getAccountStatus } from "../utils/access";
+
+const revenueChartData = [
+  { month: "Oct", revenue: 320000 },
+  { month: "Nov", revenue: 410000 },
+  { month: "Dec", revenue: 380000 },
+  { month: "Jan", revenue: 520000 },
+  { month: "Feb", revenue: 610000 },
+  { month: "Mar", revenue: 740000 },
+  { month: "Apr", revenue: 876500 },
+];
 
 const INR = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
-const SCHEME_CATEGORIES = ["Subsidies", "Insurance", "AgriTech", "Loans", "Markets", "Energy", "Soil"];
-const PIE_COLORS = ["#0f172a", "#334155", "#64748b", "#94a3b8", "#cbd5e1"];
+const tabs = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "users", label: "Users", icon: Users },
+  { id: "waste", label: "Waste to Wealth", icon: Sparkles },
+  { id: "moderation", label: "Moderation", icon: ShieldCheck },
+  { id: "health", label: "System Health", icon: Gauge },
+];
 
 export default function AdminDashboardPage() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("Analytics");
-  const [toast, setToast] = useState(null);
+  const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [toast, setToast] = useState(null);
   const [users, setUsers] = useState([]);
-  const [schemes, setSchemes] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [contracts, setContracts] = useState([]);
-
-  const [schemeModal, setSchemeModal] = useState({ open: false, data: null });
-  const [userModal, setUserModal] = useState({ open: false, data: null });
+  const [bids, setBids] = useState([]);
+  const [moderation, setModeration] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [health, setHealth] = useState({ apiUptime: 0, dbResponseMs: 0, activeConnections: 0, storageUsedGb: 0, storageMaxGb: 0, errorRate: 100, cacheHitRate: 0 });
+  const [settings, setSettings] = useState({ maintenanceMode: false, newRegistrations: true, bidNotifications: true, autoModeration: true, maxBidDuration: "7d", minBidAmount: 500, platformFeePercent: 2.5, smsAlerts: true, emailDigest: true });
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  async function fetchData() {
-    setLoading(true);
-    try {
-      const { data: u } = await supabase.from("app_users").select("*").order("created_at", { ascending: false });
-      const { data: s } = await supabase.from("government_schemes").select("*").order("created_at", { ascending: false });
-      const { data: b } = await supabase.from("kiraya_bookings").select("*").order("booked_at", { ascending: false });
-      const { data: c } = await supabase.from("enterprise_contracts").select("*").order("created_at", { ascending: false });
-      
-      setUsers(u || []);
-      setSchemes(s || []);
-      setBookings(b || []);
-      setContracts(c || []);
-    } catch (err) {
-      notify("Failed to sync platform data.", "error");
-    } finally {
-      setLoading(false);
+    let active = true;
+    async function loadAdminData() {
+      try {
+        setLoading(true);
+        const response = await requestJson("/api/admin-dashboard");
+        const payload = response?.data || {};
+        if (!active) return;
+        setUsers(payload.users || []);
+        setBids(payload.bids || []);
+        setModeration(payload.moderation || []);
+        setActivity(payload.activity || []);
+        setHealth(payload.health || {});
+        setSettings(payload.settings || {});
+      } catch (error) {
+        if (!active) return;
+        setToast({ message: error?.message || "Could not load admin data.", type: "error" });
+      } finally {
+        if (active) setLoading(false);
+      }
     }
-  }
+    loadAdminData();
+    return () => { active = false; };
+  }, []);
 
   const notify = (message, type = "success") => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    window.setTimeout(() => setToast(null), 2600);
   };
 
   const dashboardStats = useMemo(() => {
-    const revenue = (bookings || []).reduce((s, x) => s + (Number(x.total_price) || 0), 0) + (contracts || []).reduce((s, x) => s + (Number(x.value) || 0), 0);
-    const kycPending = (users || []).filter(u => u.kyc_status === 'pending').length;
-    return { revenue, usersCount: (users || []).length, schemesCount: (schemes || []).length, kycPending };
-  }, [users, schemes, bookings, contracts]);
+    const revenue = bids.filter((bid) => bid.status === "completed").reduce((sum, bid) => sum + Number(bid.currentBid || bid.basePrice || 0), 0);
+    const pendingKyc = users.filter((user) => getAccountStatus(user) === "pending" || getAccountStatus(user) === "needs_review" || getAccountStatus(user) === "pending_approval").length;
+    return {
+      totalUsers: users.length,
+      activeBids: bids.filter((bid) => ["active", "pending_approval", "disputed"].includes(bid.status)).length,
+      pendingKyc,
+      revenue,
+      moderationCount: moderation.length,
+    };
+  }, [bids, moderation, users]);
 
-  const handleSchemeSubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const payload = Object.fromEntries(formData.entries());
+  const filteredUsers = useMemo(() => {
+    const needle = searchQuery.toLowerCase();
+    return users.filter((user) => `${user.name} ${user.identifier} ${user.phone} ${user.role}`.toLowerCase().includes(needle));
+  }, [searchQuery, users]);
+
+  const filteredBids = useMemo(() => {
+    const needle = searchQuery.toLowerCase();
+    return bids.filter((bid) => `${bid.id} ${bid.farmerName} ${bid.enterpriseName} ${bid.residueType}`.toLowerCase().includes(needle));
+  }, [bids, searchQuery]);
+
+  const updateUserStatus = async (id, status) => {
     try {
-      const { error } = await supabase.from("government_schemes").upsert({
-        ...schemeModal.data,
-        ...payload,
-        updated_at: new Date().toISOString()
+      const response = await requestJson("/api/admin-dashboard", {
+        method: "PATCH",
+        body: JSON.stringify({ action: "update-user-status", userId: id, status }),
       });
-      if (error) throw error;
-      notify("Scheme registry updated.");
-      setSchemeModal({ open: false, data: null });
-      fetchData();
-    } catch (err) { notify(err.message, "error"); }
+      const updatedUser = response?.data?.user;
+      if (updatedUser) {
+        setUsers((prev) => prev.map((user) => (user.id === id ? { ...user, ...updatedUser, status: updatedUser.status || status } : user)));
+      }
+      notify(`User status updated to ${status}.`);
+    } catch (error) {
+      notify(error?.message || "Failed to update user.", "error");
+    }
   };
 
-  const deleteScheme = async (id) => {
-    if (!window.confirm("Remove this scheme?")) return;
+  const handleBidAction = async (id, nextStatus) => {
     try {
-      const { error } = await supabase.from("government_schemes").delete().eq("id", id);
-      if (error) throw error;
-      notify("Scheme removed.");
-      fetchData();
-    } catch (err) { notify(err.message, "error"); }
+      await requestJson("/api/admin-dashboard", {
+        method: "PATCH",
+        body: JSON.stringify({ action: "update-auction-status", auctionId: id, status: nextStatus }),
+      });
+      setBids((prev) => prev.map((bid) => (bid.id === id ? { ...bid, status: nextStatus } : bid)));
+      const label = nextStatus === "completed" ? "completed" : nextStatus === "disputed" ? "escalated" : "approved";
+      notify(`Waste to Wealth bid ${label}.`);
+    } catch (error) {
+      notify(error?.message || "Failed to update auction.", "error");
+    }
   };
 
-  const updateKYC = async (id, status) => {
-    try {
-      const { error } = await supabase.from("app_users").update({ kyc_status: status }).eq("id", id);
-      if (error) throw error;
-      notify(`User KYC marked as ${status}.`);
-      fetchData();
-    } catch (err) { notify(err.message, "error"); }
+  const handleModerationAction = (id, action) => {
+    setModeration((prev) => prev.filter((entry) => entry.id !== id));
+    const actionLabel = action === "approve" ? "approved" : action === "remove" ? "removed" : "flagged";
+    setActivity((prev) => [{ id: `act-${Date.now()}`, action: `Moderation ${actionLabel}`, detail: `Item ${id} was ${actionLabel} by admin`, timestamp: "just now", type: "moderation" }, ...prev]);
+    notify(`Item ${actionLabel}.`);
+  };
+
+  const toggleSetting = (key) => {
+    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+    notify("Preference updated.");
   };
 
   return (
-    <PageWrapper className="bg-slate-50/50 min-h-screen">
-      <div className="flex min-h-screen">
-        
-        {/* SIDEBAR */}
-        <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0">
-           <div className="p-8 pb-12">
-              <div className="flex items-center gap-3">
-                 <div className="h-9 w-9 bg-slate-900 rounded-lg flex items-center justify-center text-white shadow-xl shadow-slate-900/10">
-                    <Shield size={20} />
-                 </div>
-                 <span className="text-xl font-bold tracking-tight text-slate-900">Admin Portal</span>
-              </div>
-           </div>
-           <nav className="flex-1 px-4 space-y-1">
-              <NavItem active={activeTab === "Analytics"} icon={LayoutDashboard} label="Dashboard" onClick={() => setActiveTab("Analytics")} />
-              <NavItem active={activeTab === "Users"} icon={Users} label="User Management" onClick={() => setActiveTab("Users")} />
-              <NavItem active={activeTab === "Schemes"} icon={FileText} label="Govt Schemes" onClick={() => setActiveTab("Schemes")} />
-              <NavItem active={activeTab === "Revenue"} icon={BadgeDollarSign} label="Financials" onClick={() => setActiveTab("Revenue")} />
-           </nav>
-           <div className="p-4 border-t border-slate-100">
-              <button onClick={() => { signOut(); navigate("/"); }} className="flex items-center gap-3 w-full p-3 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm font-semibold">
-                 <LogOut size={18} /> Sign Out
-              </button>
-           </div>
+    <PageWrapper className="min-h-screen bg-slate-50">
+      <div className="flex min-h-screen flex-col lg:flex-row">
+        <aside className="w-full border-b border-slate-200 bg-white/90 p-5 lg:w-72 lg:border-b-0 lg:border-r lg:p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/20">
+              <Shield size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-emerald-600">Kisaan SevaK</p>
+              <h2 className="text-lg font-black text-slate-900">Admin Command Center</h2>
+            </div>
+          </div>
+          <nav className="mt-8 space-y-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-black transition ${activeTab === tab.id ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
+                  <span className="flex items-center gap-3"><Icon size={17} />{tab.label}</span>
+                  <ChevronRight size={16} />
+                </button>
+              );
+            })}
+          </nav>
+          <div className="mt-8 rounded-[24px] border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-700">Platform Pulse</p>
+            <p className="mt-2 text-sm font-semibold text-slate-700">All modules are monitored from one control room.</p>
+          </div>
+          <button onClick={() => { signOut(); navigate("/"); }} className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-3 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
+            <LogOut size={16} /> Sign out
+          </button>
         </aside>
 
-        {/* CONTENT */}
-        <main className="flex-1 overflow-y-auto no-scrollbar">
-           <header className="h-20 bg-white border-b border-slate-200 px-10 flex items-center justify-between sticky top-0 z-40">
-              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">{activeTab}</h2>
-              <div className="flex items-center gap-6">
-                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search..." className="h-10 w-64 bg-slate-50 rounded-lg pl-10 pr-4 text-sm border border-slate-200 focus:bg-white focus:ring-2 focus:ring-slate-900/5 focus:outline-none transition-all" />
-                 </div>
-                 <div className="h-8 w-px bg-slate-200" />
-                 <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-xs font-bold">AD</div>
-                    <span className="text-sm font-semibold text-slate-900">System Admin</span>
-                 </div>
+        <main className="flex-1">
+          <header className="border-b border-slate-200 bg-white/80 px-5 py-4 backdrop-blur lg:px-8">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">Operations Dashboard</p>
+                <h3 className="text-2xl font-black text-slate-900">{tabs.find((item) => item.id === activeTab)?.label}</h3>
               </div>
-           </header>
+              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <Search size={16} className="text-slate-400" />
+                <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search users or bids" className="w-48 bg-transparent text-sm font-semibold outline-none" />
+              </div>
+            </div>
+          </header>
 
-           <div className="p-10">
-              {activeTab === "Analytics" && (
-                <div className="space-y-8">
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <KPICard title="Total Users" value={dashboardStats.usersCount} icon={Users} />
-                      <KPICard title="Pending KYC" value={dashboardStats.kycPending} icon={FileCheck2} warning={dashboardStats.kycPending > 0} />
-                      <KPICard title="Live Schemes" value={dashboardStats.schemesCount} icon={Briefcase} />
-                      <KPICard title="Gross Volume" value={INR.format(dashboardStats.revenue)} icon={BadgeDollarSign} />
-                   </div>
-                   <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                      <div className="xl:col-span-2 bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                         <div className="flex items-center justify-between mb-8">
-                            <h3 className="font-bold text-slate-900">Growth Metrics</h3>
-                            <button onClick={fetchData} className="text-xs font-bold text-slate-400 hover:text-slate-900 flex items-center gap-2"><Clock size={14} /> Refresh</button>
-                         </div>
-                         <div className="h-72">
-                            <ResponsiveContainer width="100%" height="100%">
-                               <AreaChart data={[{n: 'M', v: 40}, {n: 'T', v: 45}, {n: 'W', v: 38}, {n: 'T', v: 60}, {n: 'F', v: 80}, {n: 'S', v: 75}, {n: 'S', v: 92}]}>
-                                  <defs>
-                                     <linearGradient id="colorV" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0f172a" stopOpacity={0.05}/><stop offset="95%" stopColor="#0f172a" stopOpacity={0}/></linearGradient>
-                                  </defs>
-                                  <Area type="monotone" dataKey="v" stroke="#0f172a" strokeWidth={2.5} fill="url(#colorV)" />
-                               </AreaChart>
-                            </ResponsiveContainer>
-                         </div>
-                      </div>
-                      <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                         <h3 className="font-bold text-slate-900 mb-6">User Distribution</h3>
-                         <div className="h-72">
-                            <ResponsiveContainer width="100%" height="100%">
-                               <PieChart>
-                                  <Pie data={[{n: 'Farmers', v: 60}, {n: 'Buyers', v: 30}, {n: 'Admins', v: 10}]} dataKey="v" innerRadius={60} outerRadius={80} paddingAngle={5}>
-                                     {PIE_COLORS.map((c, i) => <Cell key={i} fill={c} />)}
-                                  </Pie>
-                                  <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
-                               </PieChart>
-                            </ResponsiveContainer>
-                         </div>
-                      </div>
-                   </div>
+          <div className="space-y-6 p-5 lg:p-8">
+            {loading && (
+              <div className="rounded-[32px] border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
+                Loading live dashboard data from Neon...
+              </div>
+            )}
+
+            {activeTab === "overview" && !loading && (
+              <>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <StatCard title="Total Users" value={dashboardStats.totalUsers} icon={Users} tone="slate" />
+                  <StatCard title="Active Bids" value={dashboardStats.activeBids} icon={TrendingUp} tone="emerald" />
+                  <StatCard title="Pending KYC" value={dashboardStats.pendingKyc} icon={FileCheck2} tone="amber" />
+                  <StatCard title="Moderation Queue" value={dashboardStats.moderationCount} icon={ShieldCheck} tone="rose" />
                 </div>
-              )}
 
-              {activeTab === "Users" && (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                   <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
-                      <h3 className="font-bold text-slate-900">Platform Directory</h3>
-                      <p className="text-xs text-slate-400 font-medium">{users.length} registered accounts</p>
-                   </div>
-                   <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                           <tr className="bg-slate-50/50 border-b border-slate-100">
-                              <th className="px-8 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">User Profile</th>
-                              <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Classification</th>
-                              <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">KYC Compliance</th>
-                              <th className="px-8 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
-                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                           {users.map(u => (
-                              <tr key={u.id} className="hover:bg-slate-50/30 transition-colors">
-                                 <td className="px-8 py-5">
-                                    <button onClick={() => setUserModal({ open: true, data: u })} className="flex items-center gap-3 text-left">
-                                       <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 border border-slate-200">{u.name?.charAt(0) || 'U'}</div>
-                                       <div>
-                                          <p className="text-sm font-bold text-slate-900 leading-none mb-1">{u.name || 'Citizen'}</p>
-                                          <p className="text-[11px] text-slate-500 font-medium">{u.phone}</p>
-                                       </div>
-                                    </button>
-                                 </td>
-                                 <td className="px-6 py-5">
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${u.portal === 'buyer' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>{u.portal || 'Farmer'}</span>
-                                 </td>
-                                 <td className="px-6 py-5">
-                                    <div className="flex items-center gap-2">
-                                       <div className={`h-1.5 w-1.5 rounded-full ${u.kyc_status === 'verified' ? 'bg-emerald-500' : u.kyc_status === 'pending' ? 'bg-amber-500' : 'bg-slate-300'}`} />
-                                       <span className="text-[11px] font-semibold text-slate-700 capitalize">{u.kyc_status || 'Unverified'}</span>
-                                    </div>
-                                 </td>
-                                 <td className="px-8 py-5">
-                                    <div className="flex justify-end gap-2">
-                                       {u.kyc_status !== 'verified' && <button onClick={() => updateKYC(u.id, 'verified')} className="h-8 px-4 bg-slate-900 text-white rounded-lg text-[10px] font-bold hover:bg-slate-800 transition-colors">Verify</button>}
-                                       <button className="h-8 px-3 text-rose-600 hover:bg-rose-50 rounded-lg text-[10px] font-bold transition-colors">Suspend</button>
-                                    </div>
-                                 </td>
-                              </tr>
-                           ))}
-                        </tbody>
-                    </table>
-                   </div>
+                <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+                  <SectionCard title="Growth & Marketplace Volume" icon={Activity}>
+                    <div className="h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={revenueChartData}>
+                          <defs>
+                            <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#0f172a" stopOpacity={0.2} />
+                              <stop offset="95%" stopColor="#0f172a" stopOpacity={0.02} />
+                            </linearGradient>
+                          </defs>
+                          <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                          <YAxis tickLine={false} axisLine={false} />
+                          <Tooltip />
+                          <Area type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={2.5} fill="url(#revenueFill)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </SectionCard>
+                  <SectionCard title="Platform Mix" icon={Activity}>
+                    <div className="h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={[{ name: "Farmers", value: 64 }, { name: "Buyers", value: 24 }, { name: "Admins", value: 12 }]} dataKey="value" innerRadius={54} outerRadius={78} paddingAngle={4}>
+                            <Cell fill="#0f172a" />
+                            <Cell fill="#38bdf8" />
+                            <Cell fill="#10b981" />
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </SectionCard>
                 </div>
-              )}
 
-              {activeTab === "Schemes" && (
-                <div className="space-y-6">
-                   <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                      <div>
-                         <h3 className="font-bold text-slate-900">Registry Protocols</h3>
-                         <p className="text-[11px] text-slate-500 mt-1 font-medium">Add or update ministerial initiatives for the mobile experience.</p>
-                      </div>
-                      <button onClick={() => setSchemeModal({ open: true, data: null })} className="h-10 px-6 bg-slate-900 text-white rounded-lg flex items-center gap-2 text-xs font-bold hover:bg-slate-800 transition-colors">
-                         <Plus size={16} /> Add Protocol
-                      </button>
-                   </div>
-                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      {schemes.map(s => (
-                        <div key={s.id} className="bg-white rounded-2xl p-6 border border-slate-200 hover:shadow-lg hover:shadow-slate-200/50 transition-all group">
-                           <div className="flex justify-between items-start mb-4">
-                              <span className="px-2 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-bold text-slate-400 uppercase tracking-widest">{s.category}</span>
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                 <button onClick={() => setSchemeModal({ open: true, data: s })} className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-slate-900 rounded-md hover:bg-slate-50 transition-colors"><Edit size={16} /></button>
-                                 <button onClick={() => deleteScheme(s.id)} className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors"><Trash2 size={16} /></button>
-                              </div>
-                           </div>
-                           <h4 className="font-bold text-slate-900 mb-1 uppercase tracking-tight text-sm">{s.title_en}</h4>
-                           <p className="text-xs font-medium text-slate-500 mb-6 italic line-clamp-1">{s.official_link}</p>
-                           <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-5">
-                              <div><p className="text-[9px] font-bold text-slate-400 uppercase">Benefit</p><p className="text-[11px] font-bold text-slate-700">{s.benefit_en || 'N/A'}</p></div>
-                              <div><p className="text-[9px] font-bold text-slate-400 uppercase">Target</p><p className="text-[11px] font-bold text-slate-700">{s.target_en || 'All'}</p></div>
-                           </div>
+                <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+                  <SectionCard title="Recent Admin Activity" icon={ShieldCheck}>
+                    <div className="space-y-3">
+                      {activity.slice(0, 6).map((item) => (
+                        <div key={item.id} className="flex items-start justify-between rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3">
+                          <div>
+                            <p className="text-sm font-black text-slate-800">{item.action}</p>
+                            <p className="text-xs text-slate-500">{item.detail}</p>
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{item.timestamp}</span>
                         </div>
                       ))}
-                   </div>
+                    </div>
+                  </SectionCard>
+                  <SectionCard title="System Health Snapshot" icon={Gauge}>
+                    <div className="grid gap-3">
+                      <MetricRow label="API uptime" value={`${health.apiUptime}%`} />
+                      <MetricRow label="Avg DB response" value={`${health.dbResponseMs}ms`} />
+                      <MetricRow label="Storage" value={`${health.storageUsedGb}/${health.storageMaxGb} GB`} />
+                      <MetricRow label="Error rate" value={`${health.errorRate}%`} />
+                    </div>
+                  </SectionCard>
                 </div>
-              )}
+              </>
+            )}
 
-              {activeTab === "Revenue" && (
-                <div className="space-y-8">
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <RevenueMiniCard label="Equipment Rental" value={INR.format((bookings || []).reduce((s, x) => s + (Number(x.total_price) || 0), 0))} icon={ArrowUpCircle} color="text-emerald-500" />
-                      <RevenueMiniCard label="Enterprise Contracts" value={INR.format((contracts || []).reduce((s, x) => s + (Number(x.value) || 0), 0))} icon={Building} color="text-indigo-500" />
-                      <RevenueMiniCard label="Net Settlement" value={INR.format(dashboardStats.revenue)} icon={CreditCard} color="text-slate-900" />
-                   </div>
-                   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                      <div className="p-8 border-b border-slate-100"><h3 className="font-bold text-slate-900">Recent Transactions</h3></div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                           <thead className="bg-slate-50/50">
-                              <tr className="border-b border-slate-100">
-                                 <th className="px-8 py-4 text-[11px] font-bold text-slate-400 uppercase">Description</th>
-                                 <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase">Category</th>
-                                 <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase">Value</th>
-                                 <th className="px-8 py-4 text-[11px] font-bold text-slate-400 uppercase text-right">Timestamp</th>
-                              </tr>
-                           </thead>
-                           <tbody className="divide-y divide-slate-100 text-[11px] font-bold text-slate-700 uppercase italic">
-                              {(bookings || []).slice(0, 10).map(b => (
-                                <tr key={b.id}>
-                                   <td className="px-8 py-5">Eq Rental: {b.equipment_name || 'Agri Machine'}</td>
-                                   <td className="px-6 py-5">Rental</td>
-                                   <td className="px-6 py-5 text-emerald-600">+{INR.format(b.total_price)}</td>
-                                   <td className="px-8 py-5 text-right text-slate-400 font-medium lowercase italic">{new Date(b.booked_at).toLocaleString()}</td>
-                                </tr>
-                              ))}
-                           </tbody>
-                        </table>
+            {activeTab === "users" && !loading && (
+              <SectionCard title="User & KYC Management" icon={Users}>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">
+                        <th className="px-3 py-3">User</th>
+                        <th className="px-3 py-3">Role</th>
+                        <th className="px-3 py-3">Status</th>
+                        <th className="px-3 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredUsers.map((user) => (
+                        <tr key={user.id} className="border-b border-slate-100">
+                          <td className="px-3 py-3">
+                            <button onClick={() => setSelectedUser(user)} className="flex items-center gap-3 text-left">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">{user.name?.charAt(0) || "U"}</div>
+                              <div>
+                                <p className="font-black text-slate-800">{user.name}</p>
+                                <p className="text-xs text-slate-500">{user.phone}</p>
+                              </div>
+                            </button>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${user.role === "enterprise" ? "bg-indigo-50 text-indigo-700" : user.role === "admin" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{user.role}</span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${getAccountStatus(user) === "active" ? "bg-emerald-100 text-emerald-700" : ["pending", "pending_approval", "needs_review"].includes(getAccountStatus(user)) ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>{getAccountStatus(user)}</span>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button onClick={() => updateUserStatus(user.id, "active")} className="rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase text-white">Approve</button>
+                              <button onClick={() => updateUserStatus(user.id, "pending_approval")} className="rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-black uppercase text-amber-700">Pending</button>
+                              <button onClick={() => updateUserStatus(user.id, "suspended")} className="rounded-xl bg-rose-50 px-3 py-2 text-[10px] font-black uppercase text-rose-700">Suspend</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </SectionCard>
+            )}
+
+            {activeTab === "waste" && !loading && (
+              <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                <SectionCard title="Waste to Wealth Operations" icon={Sparkles}>
+                  <div className="space-y-3">
+                    {filteredBids.map((bid) => (
+                      <div key={bid.id} className="rounded-[24px] border border-slate-200 bg-white p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-black text-slate-900">{bid.farmerName} → {bid.enterpriseName}</p>
+                            <p className="mt-1 text-xs text-slate-500">{bid.residueType} · {bid.quantity} tons</p>
+                          </div>
+                          <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${bid.status === "active" ? "bg-emerald-100 text-emerald-700" : bid.status === "disputed" ? "bg-rose-100 text-rose-700" : bid.status === "completed" ? "bg-slate-100 text-slate-700" : "bg-amber-100 text-amber-700"}`}>{bid.status}</span>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <button onClick={() => handleBidAction(bid.id, "approved")} className="rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase text-white">Approve</button>
+                          <button onClick={() => handleBidAction(bid.id, "completed")} className="rounded-xl bg-emerald-600 px-3 py-2 text-[10px] font-black uppercase text-white">Settle</button>
+                          <button onClick={() => handleBidAction(bid.id, "disputed")} className="rounded-xl bg-amber-600 px-3 py-2 text-[10px] font-black uppercase text-white">Escalate</button>
+                        </div>
                       </div>
-                   </div>
+                    ))}
+                  </div>
+                </SectionCard>
+                <SectionCard title="Escrow & Carbon Oversight" icon={Building2}>
+                  <div className="space-y-3">
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-700">Settlement</p>
+                      <p className="mt-2 font-black text-slate-900">{INR.format(dashboardStats.revenue)}</p>
+                      <p className="text-sm text-slate-600">Payouts and escrow are tracked from one place.</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Carbon certificates</p>
+                      <p className="mt-2 font-black text-slate-900">CRT-48217</p>
+                      <p className="text-sm text-slate-600">Verified environmental impact for this cycle.</p>
+                    </div>
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-700">Trust score watch</p>
+                      <p className="mt-2 font-black text-slate-900">Avg buyer trust: 91</p>
+                      <p className="text-sm text-slate-600">Fraud risk remains low for verified partners.</p>
+                    </div>
+                  </div>
+                </SectionCard>
+              </div>
+            )}
+
+            {activeTab === "moderation" && !loading && (
+              <SectionCard title="Content & Listing Moderation" icon={ShieldCheck}>
+                <div className="space-y-3">
+                  {moderation.map((item) => (
+                    <div key={item.id} className="rounded-[24px] border border-slate-200 bg-white p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black text-slate-900">{item.category}</p>
+                          <p className="mt-1 text-xs text-slate-600">{item.content}</p>
+                          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">{item.author} · {item.timestamp}</p>
+                        </div>
+                        <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${item.severity === "critical" ? "bg-rose-100 text-rose-700" : item.severity === "high" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"}`}>{item.severity}</span>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button onClick={() => handleModerationAction(item.id, "approve")} className="rounded-xl bg-emerald-600 px-3 py-2 text-[10px] font-black uppercase text-white">Approve</button>
+                        <button onClick={() => handleModerationAction(item.id, "flag")} className="rounded-xl bg-amber-600 px-3 py-2 text-[10px] font-black uppercase text-white">Flag</button>
+                        <button onClick={() => handleModerationAction(item.id, "remove")} className="rounded-xl bg-rose-600 px-3 py-2 text-[10px] font-black uppercase text-white">Remove</button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </SectionCard>
+            )}
 
-           </div>
-
-           <AnimatePresence>
-              {toast && (
-                 <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className={`fixed bottom-10 right-10 z-[100] px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 text-white font-bold text-xs ${toast.type === 'error' ? 'bg-rose-600' : 'bg-slate-900'}`}>
-                    {toast.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
-                    {toast.message}
-                 </motion.div>
-              )}
-           </AnimatePresence>
+            {activeTab === "health" && !loading && (
+              <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+                <SectionCard title="System Infrastructure" icon={Gauge}>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <MetricRow label="API Uptime" value={`${health.apiUptime}%`} />
+                    <MetricRow label="DB response" value={`${health.dbResponseMs}ms`} />
+                    <MetricRow label="Connections" value={health.activeConnections.toLocaleString()} />
+                    <MetricRow label="Cache hit" value={`${health.cacheHitRate}%`} />
+                  </div>
+                </SectionCard>
+                <SectionCard title="Admin Settings" icon={SlidersHorizontal}>
+                  <div className="space-y-3">
+                    {Object.entries(settings).slice(0, 6).map(([key, value]) => (
+                      <div key={key} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                        <span className="text-sm font-semibold capitalize text-slate-700">{key.replace(/([A-Z])/g, " $1")}</span>
+                        <button onClick={() => toggleSetting(key)} className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${value ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"}`}>{value ? "On" : "Off"}</button>
+                      </div>
+                    ))}
+                  </div>
+                </SectionCard>
+              </div>
+            )}
+          </div>
         </main>
       </div>
 
-      {/* SCHEME MODAL */}
       <AnimatePresence>
-         {schemeModal.open && (
-           <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-              <motion.form initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onSubmit={handleSchemeSubmit} className="relative w-full max-w-2xl bg-white rounded-2xl shadow-4xl overflow-hidden p-10">
-                 <button type="button" onClick={() => setSchemeModal({ open: false, data: null })} className="absolute top-10 right-10 text-slate-400 hover:text-slate-900 transition-colors"><X size={28} /></button>
-                 <h3 className="text-2xl font-bold text-slate-900 mb-6">{schemeModal.data ? 'Update Protocol' : 'New Scheme Registry'}</h3>
-                 
-                 <div className="space-y-6 mb-12 max-h-[60vh] overflow-y-auto pr-2 no-scrollbar">
-                    <div className="grid grid-cols-2 gap-6">
-                       <Input label="Title (EN)" name="title_en" defaultValue={schemeModal.data?.title_en} required />
-                       <Input label="Title (HI)" name="title_hi" defaultValue={schemeModal.data?.title_hi} />
-                    </div>
-                    <Input label="Subtitle (Summary)" name="subtitle_en" defaultValue={schemeModal.data?.subtitle_en} required />
-                    <div className="grid grid-cols-2 gap-6">
-                       <Input label="Official URL" name="official_link" defaultValue={schemeModal.data?.official_link} required />
-                       <div className="space-y-1.5">
-                          <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest pl-1">Category</p>
-                          <select name="category" defaultValue={schemeModal.data?.category || "Subsidies"} className="w-full h-12 bg-slate-50 rounded-xl px-4 text-sm font-bold border border-slate-200 focus:ring-2 focus:ring-slate-900/5 outline-none transition-all appearance-none cursor-pointer">
-                             {SCHEME_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-6 border-t border-slate-100 pt-8">
-                       <Input label="Benefit (e.g. ₹6,000)" name="benefit_en" defaultValue={schemeModal.data?.benefit_en} />
-                       <Input label="Target Audience" name="target_en" defaultValue={schemeModal.data?.target_en} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-6">
-                       <Input label="Funding Mechanism" name="funding_en" defaultValue={schemeModal.data?.funding_en} />
-                       <Input label="Policy Tenure" name="tenure_en" defaultValue={schemeModal.data?.tenure_en} />
-                    </div>
-                 </div>
-
-                 <div className="flex gap-4">
-                    <button type="button" onClick={() => setSchemeModal({ open: false, data: null })} className="flex-1 h-14 bg-slate-50 text-slate-500 rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors">Discard</button>
-                    <button type="submit" className="flex-[2] h-14 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20">Commit Changes</button>
-                 </div>
-              </motion.form>
-           </div>
-         )}
+        {toast && (
+          <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }} className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-black text-white shadow-2xl ${toast.type === "error" ? "bg-rose-600" : "bg-slate-900"}`}>
+            {toast.type === "error" ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
+            {toast.message}
+          </motion.div>
+        )}
       </AnimatePresence>
 
-      {/* USER PROFILE MODAL */}
       <AnimatePresence>
-         {userModal.open && (
-            <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-               <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-lg bg-white rounded-2xl p-10 shadow-4xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-10"><button onClick={() => setUserModal({ open: false, data: null })} className="text-slate-300 hover:text-slate-900 transition-colors"><X size={28} /></button></div>
-                  <div className="flex items-center gap-6 mb-12">
-                     <div className="h-20 w-20 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-3xl font-bold text-slate-900 uppercase italic">{userModal.data?.name?.charAt(0)}</div>
-                     <div>
-                        <h3 className="text-2xl font-bold text-slate-900 uppercase tracking-tight italic leading-none">{userModal.data?.name || 'User'}</h3>
-                        <p className="text-sm font-medium text-slate-500 mt-2">{userModal.data?.phone}</p>
-                     </div>
-                  </div>
-                  <div className="space-y-6">
-                     <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Platform Identity</p>
-                        <div className="grid grid-cols-2 gap-y-4">
-                           <div><p className="text-[10px] text-slate-500 font-bold uppercase">Role</p><p className="text-sm font-bold text-slate-900 uppercase italic">{userModal.data?.portal || 'Farmer'}</p></div>
-                           <div><p className="text-[10px] text-slate-500 font-bold uppercase">KYC Status</p><p className="text-sm font-bold text-emerald-600 uppercase italic">{userModal.data?.kyc_status || 'Pending'}</p></div>
-                        </div>
-                     </div>
-                     <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Account Metadata</p>
-                        <div className="grid grid-cols-2 gap-y-4">
-                           <div><p className="text-[10px] text-slate-500 font-bold uppercase">Registered On</p><p className="text-[11px] font-bold text-slate-700">{new Date(userModal.data?.created_at).toLocaleDateString()}</p></div>
-                           <div><p className="text-[10px] text-slate-500 font-bold uppercase">System ID</p><p className="text-[9px] font-medium text-slate-400 truncate pr-4">{userModal.data?.id}</p></div>
-                        </div>
-                     </div>
-                  </div>
-               </motion.div>
-            </div>
-         )}
+        {selectedUser && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 p-4">
+            <motion.div initial={{ scale: 0.96 }} animate={{ scale: 1 }} exit={{ scale: 0.96 }} className="w-full max-w-xl rounded-[32px] bg-white p-6 shadow-2xl">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">User profile</p>
+                  <h4 className="mt-1 text-2xl font-black text-slate-900">{selectedUser.name}</h4>
+                </div>
+                <button onClick={() => setSelectedUser(null)} className="rounded-full bg-slate-100 p-2 text-slate-600"><X size={16} /></button>
+              </div>
+              <div className="mt-6 grid gap-3 md:grid-cols-2">
+                <InfoPane label="Phone" value={selectedUser.phone} />
+                <InfoPane label="Role" value={selectedUser.role} />
+                <InfoPane label="Status" value={getAccountStatus(selectedUser)} />
+                <InfoPane label="Identifier" value={selectedUser.identifier} />
+              </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <button onClick={() => updateUserStatus(selectedUser.id, "active")} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Approve account</button>
+                <button onClick={() => updateUserStatus(selectedUser.id, "pending_approval")} className="rounded-2xl bg-amber-50 px-3 py-2 text-sm font-black text-amber-700">Mark pending</button>
+                <button onClick={() => updateUserStatus(selectedUser.id, "suspended")} className="rounded-2xl bg-rose-50 px-3 py-2 text-sm font-black text-rose-700">Suspend</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
-
     </PageWrapper>
   );
 }
 
-function NavItem({ active, icon: Icon, label, onClick }) {
-   return (
-      <button onClick={onClick} className={`flex items-center gap-3 w-full p-3.5 rounded-xl transition-all ${active ? 'bg-slate-900 text-white shadow-xl shadow-slate-950/20' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>
-         <Icon size={19} strokeWidth={active ? 3 : 2} />
-         <span className="text-sm font-bold">{label}</span>
-      </button>
-   );
+function StatCard({ title, value, icon: Icon, tone }) {
+  const toneClass = {
+    slate: "bg-slate-900 text-white",
+    emerald: "bg-emerald-50 text-emerald-700",
+    amber: "bg-amber-50 text-amber-700",
+    rose: "bg-rose-50 text-rose-700",
+  }[tone];
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${toneClass}`}>
+        <Icon size={18} />
+      </div>
+      <p className="mt-4 text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">{title}</p>
+      <p className="mt-1 text-2xl font-black text-slate-900">{value}</p>
+    </div>
+  );
 }
 
-function KPICard({ title, value, icon: Icon, warning }) {
-   return (
-      <div className="bg-white rounded-2xl p-7 border border-slate-200 shadow-sm flex items-center gap-5 group hover:shadow-md transition-shadow">
-         <div className={`h-14 w-14 rounded-xl flex items-center justify-center shrink-0 transition-colors ${warning ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-900 group-hover:bg-slate-900 group-hover:text-white'}`}><Icon size={28} /></div>
-         <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 leading-none">{title}</p>
-            <h4 className="text-2xl font-bold text-slate-900 leading-none tracking-tight">{value}</h4>
-         </div>
+function SectionCard({ title, icon: Icon, children }) {
+  return (
+    <div className="rounded-[32px] border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+      <div className="mb-5 flex items-center gap-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white">
+          <Icon size={18} />
+        </div>
+        <h4 className="text-lg font-black text-slate-900">{title}</h4>
       </div>
-   );
+      {children}
+    </div>
+  );
 }
 
-function RevenueMiniCard({ label, value, icon: Icon, color }) {
-   return (
-      <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex flex-col justify-center gap-4">
-         <div className={`h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center ${color}`}><Icon size={20} /></div>
-         <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-            <p className="text-2xl font-bold text-slate-900 tracking-tight">{value}</p>
-         </div>
-      </div>
-   );
+function MetricRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-700">
+      <span>{label}</span>
+      <span className="font-black text-slate-900">{value}</span>
+    </div>
+  );
 }
 
-function Input({ label, name, defaultValue, type="text", required=false }) {
-   return (
-      <div className="space-y-2">
-         <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest pl-1">{label}</p>
-         <input name={name} type={type} defaultValue={defaultValue} required={required} className="w-full h-12 bg-slate-50 rounded-xl px-5 text-sm font-bold border border-slate-200 focus:bg-white focus:ring-2 focus:ring-slate-900/5 outline-none transition-all placeholder:text-slate-300 shadow-inner shadow-slate-900/5" />
-      </div>
-   );
+function InfoPane({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">{label}</p>
+      <p className="mt-2 font-black text-slate-900">{value}</p>
+    </div>
+  );
 }

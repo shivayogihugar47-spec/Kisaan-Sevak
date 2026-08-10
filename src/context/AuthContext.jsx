@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { requestJson } from "../lib/api";
+import { getAccountStatus } from "../utils/access";
 
 const AuthContext = createContext(null);
 const SESSION_STORAGE_KEY = "kisaan-sevak-session";
@@ -25,15 +26,17 @@ function clearSession() {
   }
 }
 
-function buildSessionProfile({ username, portal, name, role, meta, phone }) {
+function buildSessionProfile({ username, portal, name, role, meta, phone, status }) {
   const cleanName = String(name || "").trim() || "User";
+  const safeRole = role || portal;
   return {
     id: username,
     username,
     name: cleanName,
-    role: role || portal,
+    role: safeRole,
     portal: portal || role || "",
     phone: String(phone || "").trim(),
+    status: getAccountStatus({ status, accountStatus: status, meta }),
     meta: meta || null,
   };
 }
@@ -63,6 +66,7 @@ export function AuthProvider({ children }) {
           role: session.role,
           meta: session?.meta,
           phone: session?.phone,
+          status: session?.status || session?.meta?.accountStatus || session?.meta?.status,
         }),
       );
     }
@@ -92,6 +96,7 @@ export function AuthProvider({ children }) {
         role: cleanRole,
         meta: meta || null,
         phone: cleanPhone,
+        status: meta?.accountStatus || meta?.status || "active",
       }),
     );
     writeSession({
@@ -99,6 +104,7 @@ export function AuthProvider({ children }) {
       role: cleanRole,
       name: cleanName,
       phone: cleanPhone,
+      status: meta?.accountStatus || meta?.status || "active",
       meta: meta || null,
     });
 
@@ -136,7 +142,7 @@ export function AuthProvider({ children }) {
       role: account?.portal || cleanRole,
       name: account?.name || cleanName,
       phone: account?.phone || "",
-      meta: null,
+      meta: { accountStatus: account?.account_status || account?.status || "active" },
     });
   }
 
@@ -165,7 +171,7 @@ export function AuthProvider({ children }) {
       role: account?.portal || cleanRole,
       name: account?.name || "User",
       phone: account?.phone || "",
-      meta: null,
+      meta: { accountStatus: account?.status || account?.account_status || "active" },
     });
   }
 

@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
+import { isBuyerPortalAllowed } from "../utils/access";
 
 /**
  * Enhanced ProtectedRoute that enforces valid roles.
@@ -28,9 +29,20 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
     return children;
   }
 
-  // If the user's role isn't in the allowed structure
   if (!profile || !allowedRoles.includes(profile.role)) {
     return <Navigate to="/" replace />;
+  }
+
+  if (!isBuyerPortalAllowed(profile) && (profile.role === "buyer" || profile.role === "enterprise")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6">
+        <div className="max-w-md rounded-[32px] border border-amber-200 bg-white p-8 text-center shadow-lg">
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-600">Buyer approval</p>
+          <h1 className="mt-3 text-2xl font-black text-slate-900">Your buyer account is pending approval</h1>
+          <p className="mt-3 text-sm text-slate-600">An administrator will verify your account before you can bid in the marketplace.</p>
+        </div>
+      </div>
+    );
   }
 
   return children;

@@ -1,60 +1,44 @@
-// Chat service using Puter.js - Free DeepSeek API
-// No API keys needed, user-pays model
-
 export const sendChatRequest = async ({ 
-  model = "deepseek/deepseek-v3.2",
+  model = "poolside/laguna-m.1:free",
   messages, 
   temperature = 0.5 
 }) => {
   try {
-    // Check if puter is available (script should be loaded in HTML)
-    if (typeof window === 'undefined' || !window.puter) {
-      throw new Error("Puter.js not loaded. Make sure the script tag is included in your HTML.");
+    if (typeof window === "undefined") {
+      throw new Error("This service must be called in the browser.");
     }
 
-    // Format message content
-    let userContent = "";
-    
-    // If there's a system role message, prepend it
-    const systemMsg = messages.find(m => m.role === 'system');
+    const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || import.meta.env.OPENROUTER_API_KEY || "";
+    if (!apiKey) {
+      throw new Error("OpenRouter API key is not configured.");
+    }
+
+    const systemMsg = messages.find((m) => m.role === "system");
     const userMsg = messages[messages.length - 1];
-    
-    if (systemMsg) {
-      userContent = `[INSTRUCTIONS]\n${systemMsg.content}\n\n[QUESTION]\n${userMsg?.content || ""}`;
-    } else {
-      userContent = userMsg?.content || "";
-    }
+    const prompt = systemMsg ? `[INSTRUCTIONS]\n${systemMsg.content}\n\n[QUESTION]\n${userMsg?.content || ""}` : (userMsg?.content || "");
 
-    // Call Puter.js DeepSeek API
-    const response = await window.puter.ai.chat(userContent, {
-      model: model,
-      temperature: temperature,
-      max_tokens: 1024,
-      stream: false // Set to false for single response
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        reasoning: { enabled: true },
+      }),
     });
 
-    // Extract reply from response
-    let reply = response?.message?.content || response?.content || response?.text || "No response received.";
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload?.error?.message || `OpenRouter request failed with status ${response.status}.`);
+    }
 
-    // Clean up markdown code blocks if present
-    reply = reply
-      .replace(/^```[\s\S]*?\n/, '') // Remove opening ```
-      .replace(/\n```$/, '');        // Remove closing ```
-
-    return {
-      reply: reply
-    };
+    const reply = payload?.choices?.[0]?.message?.content || "No response received.";
+    return { reply };
   } catch (error) {
     console.error("Chat Service Error:", error);
-    
-    // Provide helpful error messages
-    if (error.message.includes("Puter.js not loaded")) {
-      throw new Error("Puter.js is not loaded. Please ensure the script tag is included in your HTML file.");
-    }
-    
-    throw new Error(
-      error.message || 
-      "Failed to get response. Please check your internet connection and try again."
-    );
+    throw new Error(error?.message || "Failed to get response. Please check your internet connection and try again.");
   }
 };

@@ -18,6 +18,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { listAuctionsSource, placeBid, subscribeToMarketplaceEvents, MARKETPLACE_EVENTS } from "../lib/marketplace";
 import { listEnterpriseContracts } from "../services/enterpriseContractsService";
 import { formatPrice } from "../utils/helpers";
+import { isPendingBuyer, isBuyerPortalAllowed } from "../utils/access";
 
 // ---------- LocalStorage helpers for unique features ----------
 const STORAGE_KEYS = {
@@ -113,6 +114,8 @@ export default function EnterpriseDashboardPage() {
   const myId = profile?.id || "";
   const myPhone = profile?.phone || "";
   const myName = profile?.name || "";
+  const buyerPending = isPendingBuyer(profile);
+  const buyerPortalAllowed = isBuyerPortalAllowed(profile);
 
   // Load data from backend
   const loadData = useCallback(async () => {
@@ -211,7 +214,12 @@ export default function EnterpriseDashboardPage() {
   }, [filteredAuctions, auctions, myId]);
 
   const submitBid = async () => {
-    if (!selectedAuction || !bidAmount) return;
+    if (!selectedAuction || !bidAmount || !buyerPortalAllowed) {
+      if (!buyerPortalAllowed) {
+        alert("Your buyer account is pending approval. Please wait for admin verification before placing bids.");
+      }
+      return;
+    }
     try {
       await placeBid({
         auctionId: selectedAuction.id,
@@ -275,6 +283,35 @@ export default function EnterpriseDashboardPage() {
   return (
     <PageWrapper className="bg-[#F9FBFC]">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:pb-32">
+        {buyerPending && (
+          <div className="mb-6 rounded-[28px] border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-700">Buyer access review</p>
+                <p className="mt-1 text-sm font-semibold text-slate-700">Your account is under admin review. You will be able to place bids once approved.</p>
+              </div>
+              <div className="rounded-full bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-amber-700">Pending approval</div>
+            </div>
+          </div>
+        )}
+
+        {!buyerPortalAllowed && !buyerPending && (
+          <div className="mb-6 rounded-[28px] border border-rose-200 bg-rose-50 p-4 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-rose-700">Buyer access blocked</p>
+            <p className="mt-1 text-sm font-semibold text-slate-700">This buyer account is currently suspended. Contact support to restore access.</p>
+          </div>
+        )}
+
+        <div className="mb-6 rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Complete buyer workflow</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-4">
+            <StepCard title="1. Register" body="Create your buyer account and submit your profile for review." />
+            <StepCard title="2. Approve" body="The admin verifies your buyer status before you can bid." />
+            <StepCard title="3. Bid" body="Once approved, browse live lots and place bids in the marketplace." />
+            <StepCard title="4. Settle" body="Winning bids move into escrow, logistics, and settlement tracking." />
+          </div>
+        </div>
+
         {/* Header with Profile Dropdown */}
         <header className="flex flex-col gap-6 mb-10">
           <div className="flex items-center justify-between">
@@ -324,7 +361,8 @@ export default function EnterpriseDashboardPage() {
             </div>
             <button
               onClick={() => setShowAlertModal(true)}
-              className="h-14 bg-white border rounded-2xl flex items-center justify-center gap-2 text-xs font-black hover:bg-emerald-50 transition"
+              disabled={!buyerPortalAllowed}
+              className="h-14 bg-white border rounded-2xl flex items-center justify-center gap-2 text-xs font-black hover:bg-emerald-50 transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               <BellRing size={18} /> SET PRICE ALERT
             </button>
@@ -569,6 +607,15 @@ export default function EnterpriseDashboardPage() {
 // ---------- Subcomponents (updated AuctionCard with Save Farmer) ----------
 function KPICard({ title, value, trend, icon: Icon, color }) {
   return <div className="bg-white p-6 md:p-8 rounded-[2rem] border shadow-sm"><div className="flex justify-between"><Icon size={24} className="text-emerald-600"/><span className="text-[10px] font-black text-emerald-600">{trend}</span></div><p className="text-[10px] font-black text-slate-400 mt-8">{title}</p><p className="text-2xl md:text-3xl font-black">{value}</p></div>;
+}
+
+function StepCard({ title, body }) {
+  return (
+    <div className="rounded-[22px] border border-slate-100 bg-slate-50 p-3">
+      <p className="text-sm font-black text-slate-900">{title}</p>
+      <p className="mt-1 text-sm text-slate-600">{body}</p>
+    </div>
+  );
 }
 
 function AuctionCard({ auction, onBid, onSaveFarmer }) {

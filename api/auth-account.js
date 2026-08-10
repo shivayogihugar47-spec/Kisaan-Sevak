@@ -49,21 +49,24 @@ export default async function handler(req, res) {
       }
 
       const passwordHash = sha256Hex(password);
+      const initialStatus = ["buyer", "enterprise"].includes(role.toLowerCase()) ? "pending_approval" : "active";
       const inserted = await sql`
         insert into app_users (
           username,
           password_hash,
           portal,
           name,
+          account_status,
           updated_at
         ) values (
           ${username},
           ${passwordHash},
           ${role},
           ${name},
+          ${initialStatus},
           now()
         )
-        returning username, name, portal, phone
+        returning username, name, portal, phone, account_status
       `;
 
       res.status(200).json({ ok: true, data: inserted[0] || null });
@@ -72,7 +75,7 @@ export default async function handler(req, res) {
 
     if (mode === "signin") {
       const rows = await sql`
-        select username, name, portal, phone, password_hash, password
+        select username, name, portal, phone, account_status, password_hash, password
         from app_users
         where username = ${username}
         limit 1
@@ -103,6 +106,7 @@ export default async function handler(req, res) {
           name: user.name || "User",
           portal: user.portal || role || "farmer",
           phone: user.phone || "",
+          status: user.account_status || "active",
         },
       });
       return;

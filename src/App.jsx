@@ -28,6 +28,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 // Context & Auth
 import { useAuth } from "./context/AuthContext";
 import { useLanguage } from "./context/LanguageContext";
+import { isBuyerPortalAllowed } from "./utils/access";
 
 /**
  * Main Application Component
@@ -53,6 +54,7 @@ export default function App() {
   // FIX: Only show if the user is actually authenticated
   const userPortal = portal || profile?.role || "";
   const isFarmerOrSeller = isAuthenticated && (userPortal === "farmer" || userPortal === "seller");
+  const buyerAccessBlocked = isAuthenticated && !isBuyerPortalAllowed(profile) && (userPortal === "buyer" || userPortal === "enterprise");
   const isAdminPage = location.pathname.startsWith("/admin");
   const showSidebar = isFarmerOrSeller && !isAdminPage;
 
@@ -108,6 +110,8 @@ export default function App() {
                 <EnterpriseDashboardPage />
               </ProtectedRoute>
             } />
+            <Route path="/buyer-dashboard" element={<ProtectedRoute allowedRoles={['buyer', 'enterprise']}><EnterpriseDashboardPage /></ProtectedRoute>} />
+            <Route path="/buyer-portal" element={<ProtectedRoute allowedRoles={['buyer', 'enterprise']}><EnterpriseDashboardPage /></ProtectedRoute>} />
 
             {/* ========================================== */}
             {/* ADMIN ONLY ROUTES                          */}
@@ -128,10 +132,9 @@ export default function App() {
 
             {/* Legacy redirects */}
             <Route path="/farmer-dashboard" element={<ProtectedRoute allowedRoles={['farmer']}><DashboardPage /></ProtectedRoute>} />
-            <Route path="/buyer-dashboard" element={<ProtectedRoute allowedRoles={['buyer', 'enterprise']}><EnterpriseDashboardPage /></ProtectedRoute>} />
             <Route path="/onboarding" element={
               isAuthenticated
-                ? <Navigate to={userPortal === "buyer" || userPortal === "enterprise" ? "/buyer-dashboard" : userPortal === "admin" ? "/admin" : "/farmer-dashboard"} replace />
+                ? <Navigate to={buyerAccessBlocked ? "/enterprise" : (userPortal === "buyer" || userPortal === "enterprise" ? "/buyer-dashboard" : userPortal === "admin" ? "/admin" : "/farmer-dashboard")} replace />
                 : <Navigate to="/" replace />
             } />
             <Route path="/seller-dashboard" element={<Navigate to="/" replace />} />
