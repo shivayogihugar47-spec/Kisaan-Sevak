@@ -1,4 +1,5 @@
 import { getSql, readJsonBody } from "./_lib/neon.js";
+import { broadcast } from "./_lib/sseBroker.js";
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -39,15 +40,9 @@ export default async function handler(req, res) {
     } else {
       await sql`
         insert into public.community_post_likes (
-          post_id,
-          user_username,
-          user_name,
-          created_at
+          post_id, user_username, user_name, created_at
         ) values (
-          ${postId},
-          ${userUsername},
-          ${userName || null},
-          now()
+          ${postId}, ${userUsername}, ${userName || null}, now()
         )
       `;
       likedByMe = true;
@@ -60,6 +55,14 @@ export default async function handler(req, res) {
     `;
 
     const likeCount = Number(countResult?.[0]?.count || 0);
+
+    // Broadcast like update to all SSE clients
+    broadcast("like_update", {
+      post_id:    postId,
+      like_count: likeCount,
+      liked_by:   userUsername,
+      action:     likedByMe ? "liked" : "unliked",
+    });
 
     res.status(200).json({ ok: true, data: { post_id: postId, liked_by_me: likedByMe, like_count: likeCount } });
     return;

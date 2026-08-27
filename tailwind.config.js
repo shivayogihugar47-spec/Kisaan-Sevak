@@ -38,8 +38,8 @@ export default {
         },
       },
       fontFamily: {
-        display: ["Sora", "Noto Sans", "sans-serif"],
-        body: ["Noto Sans", "Manrope", "sans-serif"],
+        display: ["Sora", "Noto Sans", "Noto Sans Devanagari", "Noto Sans Kannada", "sans-serif"],
+        body: ["Noto Sans", "Manrope", "Noto Sans Devanagari", "Noto Sans Kannada", "sans-serif"],
       },
       boxShadow: {
         soft: "0 12px 40px rgba(34, 64, 22, 0.10)",

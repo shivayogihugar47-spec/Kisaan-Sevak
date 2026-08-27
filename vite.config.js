@@ -98,7 +98,9 @@ function localApiPlugin({ enabled }) {
 
           await handler(req, res);
 
-          if (!res.writableEnded) {
+          // SSE handlers keep the connection open — don't close them
+          const isSSE = res.getHeader?.("Content-Type")?.toString().includes("text/event-stream");
+          if (!res.writableEnded && !isSSE) {
             res.end();
           }
         } catch (error) {

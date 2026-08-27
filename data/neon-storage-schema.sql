@@ -225,6 +225,18 @@ create index if not exists idx_community_comments_post_id on public.community_po
 create index if not exists idx_community_likes_post_id on public.community_post_likes (post_id);
 create index if not exists idx_community_likes_user_username on public.community_post_likes (user_username);
 
+-- community follows (DB-persisted, cross-device)
+create table if not exists public.community_follows (
+  id uuid primary key default gen_random_uuid(),
+  follower_username text not null,
+  following_username text not null,
+  created_at timestamptz not null default now(),
+  unique (follower_username, following_username)
+);
+
+create index if not exists idx_community_follows_follower on public.community_follows (follower_username);
+create index if not exists idx_community_follows_following on public.community_follows (following_username);
+
 -- ---------------------------------------------------------------------------
 -- Krishi Kiraya
 -- ---------------------------------------------------------------------------

@@ -219,12 +219,13 @@ export default function MandiMitraPage() {
         });
         if (aiPayload?.data) {
           setAiRecommendation({
-            headline: `${searchCrop} AI insight`,
+            headline: `${searchCrop} — ${district}`,
             recommendation: aiPayload.data.recommendation,
             rationale: aiPayload.data.rationale,
             confidence: aiPayload.data.confidence,
             summary: aiPayload.data.summary,
             alertHint: aiPayload.data.alertHint,
+            source: aiPayload.data.source === "fallback" ? "template" : "llm",
           });
         }
       } catch {
@@ -299,10 +300,10 @@ export default function MandiMitraPage() {
                   </span>
                 </div>
                 <h3 className="font-display text-xl font-extrabold text-[#032115] md:text-2xl">
-                  Discover the best prices for your harvest
+                  {content?.mandiUi?.heroHeading ?? "Discover the best prices for your harvest"}
                 </h3>
                 <p className="mt-1.5 text-sm font-semibold text-slate-500 md:text-[15px]">
-                  Real-time mandi rates • Verified government data • AI-powered insights
+                  {content?.mandiUi?.heroSubtitle ?? "Real-time mandi rates • Verified government data • AI-powered insights"}
                 </p>
               </div>
               <div className="hidden items-center gap-3 md:flex">
@@ -332,10 +333,10 @@ export default function MandiMitraPage() {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm ring-1 ring-slate-100">
-                <ShieldCheck size={13} className="text-emerald-600" /> Govt Verified
+                <ShieldCheck size={13} className="text-emerald-600" /> {content?.mandiUi?.badgeGovtVerified ?? "Govt Verified"}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm ring-1 ring-slate-100">
-                <Sun size={13} className="text-amber-500" /> Live Updates
+                <Sun size={13} className="text-amber-500" /> {content?.mandiUi?.badgeLiveUpdates ?? "Live Updates"}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm ring-1 ring-slate-100">
                 <MapPin size={13} className="text-sky-600" /> {district}, {state}
@@ -357,19 +358,19 @@ export default function MandiMitraPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-display text-lg font-extrabold text-[#032115]">AI Market Copilot</h3>
+                        <h3 className="font-display text-lg font-extrabold text-[#032115]">{content?.mandiUi?.aiCopilotTitle ?? "AI Market Copilot"}</h3>
                         <span className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
-                          Personalized
+                          {content?.mandiUi?.aiCopilotBadge ?? "Personalized"}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm font-semibold text-emerald-700/80">Smart farming decisions, powered by data</p>
+                      <p className="mt-1 text-sm font-semibold text-emerald-700/80">{content?.mandiUi?.aiCopilotSubtitle ?? "Smart farming decisions, powered by data"}</p>
                     </div>
                   </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-2xl bg-white/70 p-4 backdrop-blur-sm ring-1 ring-emerald-100/60">
                     <p className="text-[13px] font-bold leading-relaxed text-slate-700">
-                      Your mandi view is now tailored to your farm profile, crop interests, live location, and AI guidance.
+                      {content?.mandiUi?.aiCopilotBody ?? "Your mandi view is now tailored to your farm profile, crop interests, live location, and AI guidance."}
                     </p>
                   </div>
                   <div className="rounded-2xl bg-white/70 p-4 backdrop-blur-sm ring-1 ring-emerald-100/60">
@@ -439,7 +440,7 @@ export default function MandiMitraPage() {
                     </div>
                     <div className={`h-px flex-1 bg-gradient-to-r ${style.gradient} opacity-60`} />
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      {group.items.length} crops
+                      {formatCopy(content?.mandiUi?.cropsCount, { count: group.items.length }) ?? `${group.items.length} crops`}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -461,7 +462,7 @@ export default function MandiMitraPage() {
                                 {crop.name}
                               </span>
                               <span className="mt-0.5 block truncate text-[11px] font-bold text-slate-500 group-hover:text-slate-600">
-                                View prices →
+                                {content?.mandiUi?.viewPricesTrend ?? "View prices →"}
                               </span>
                             </div>
                           </div>
@@ -477,70 +478,124 @@ export default function MandiMitraPage() {
           <motion.div variants={containerVariants} initial="hidden" animate="show" className="mt-8 space-y-6">
             {aiRecommendation ? (
               <motion.div variants={itemVariants} className="relative overflow-hidden rounded-3xl shadow-card">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500" />
-                <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-                <div className="absolute -bottom-12 -left-8 h-48 w-48 rounded-full bg-teal-300/20 blur-3xl" />
-                <div className="absolute right-12 top-12 h-20 w-20 rounded-full border border-white/10" />
-                <div className="absolute right-20 top-20 h-10 w-10 rounded-full border border-white/10" />
+                {/* Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#032115] via-emerald-800 to-teal-700" />
+                <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
+                <div className="absolute -bottom-16 -left-10 h-56 w-56 rounded-full bg-teal-300/10 blur-3xl" />
+                <div className="absolute right-8 top-8 h-32 w-32 rounded-full border border-white/5" />
+                <div className="absolute right-16 top-16 h-16 w-16 rounded-full border border-white/5" />
+
                 <div className="relative p-6 md:p-8 text-white">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+
+                  {/* ── Header row ── */}
+                  <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
-                        <Zap size={22} className="text-white" fill="currentColor" />
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm ring-1 ring-white/15 shadow-inner">
+                        <Zap size={22} className="text-amber-300" fill="currentColor" />
                       </div>
                       <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/80">AI Market Copilot</p>
-                        <h3 className="mt-1 font-display text-xl font-extrabold md:text-2xl">{aiRecommendation.headline}</h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-300">
+                            {content?.mandiUi?.aiCopilotTitle ?? "AI Market Copilot"}
+                          </p>
+                          {/* Source badge */}
+                          {aiRecommendation.source === "llm" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-[10px] font-black text-emerald-200 ring-1 ring-emerald-400/30">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live AI
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-black text-white/60 ring-1 ring-white/15">
+                              Smart estimate
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="mt-1 font-display text-xl font-extrabold md:text-2xl leading-tight">
+                          {aiRecommendation.headline}
+                        </h3>
                       </div>
                     </div>
-                    <div className="shrink-0">
-                      <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur-sm ring-1 ring-white/20">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-white/70">Confidence</p>
-                        <div className="mt-1.5 flex items-baseline gap-1">
-                          <span className="font-display text-2xl font-black">{aiRecommendation.confidence}</span>
-                          <span className="text-sm font-bold text-white/70">%</span>
-                        </div>
-                        <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-white/20">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-yellow-300 to-amber-200"
-                            style={{ width: `${aiRecommendation.confidence}%` }}
-                          />
-                        </div>
+
+                    {/* Confidence meter */}
+                    <div className="shrink-0 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/15 min-w-[100px]">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-white/60">
+                        {content?.mandiUi?.confidenceLabel ?? "Confidence"}
+                      </p>
+                      <div className="mt-1.5 flex items-baseline gap-1">
+                        <span className="font-display text-3xl font-black text-amber-300">{aiRecommendation.confidence}</span>
+                        <span className="text-sm font-bold text-white/50">%</span>
+                      </div>
+                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${
+                            aiRecommendation.confidence >= 85
+                              ? "bg-gradient-to-r from-emerald-300 to-teal-200"
+                              : aiRecommendation.confidence >= 75
+                              ? "bg-gradient-to-r from-amber-300 to-yellow-200"
+                              : "bg-gradient-to-r from-orange-300 to-amber-200"
+                          }`}
+                          style={{ width: `${aiRecommendation.confidence}%` }}
+                        />
                       </div>
                     </div>
                   </div>
-                  <div className="mt-6 grid gap-3 md:grid-cols-2">
+
+                  {/* ── Summary strip ── */}
+                  {aiRecommendation.summary && (
+                    <div className="mt-5 rounded-2xl bg-white/8 border border-white/10 px-4 py-3 backdrop-blur-sm">
+                      <p className="text-sm font-semibold text-white/80 leading-relaxed">
+                        {aiRecommendation.summary}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* ── Recommendation + Why ── */}
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm ring-1 ring-white/10">
-                      <p className="text-[11px] font-black uppercase tracking-wider text-white/60">Recommendation</p>
-                      <p className="mt-1.5 text-sm font-bold leading-relaxed text-white">{aiRecommendation.recommendation}</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-emerald-300 mb-2">
+                        {content?.mandiUi?.recommendationLabel ?? "Recommendation"}
+                      </p>
+                      <p className="text-sm font-bold leading-relaxed text-white">{aiRecommendation.recommendation}</p>
                     </div>
                     <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm ring-1 ring-white/10">
-                      <p className="text-[11px] font-black uppercase tracking-wider text-white/60">Why</p>
-                      <p className="mt-1.5 text-sm font-bold leading-relaxed text-white/90">{aiRecommendation.rationale}</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-teal-300 mb-2">
+                        {content?.mandiUi?.whyLabel ?? "Why"}
+                      </p>
+                      <p className="text-sm font-bold leading-relaxed text-white/90">{aiRecommendation.rationale}</p>
                     </div>
                   </div>
+
+                  {/* ── Alert hint ── */}
+                  {aiRecommendation.alertHint && (
+                    <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3">
+                      <span className="mt-0.5 text-base">💡</span>
+                      <p className="text-xs font-bold text-amber-200 leading-relaxed">{aiRecommendation.alertHint}</p>
+                    </div>
+                  )}
+
+                  {/* ── Action buttons ── */}
                   <div className="mt-5 flex flex-wrap gap-2.5">
                     <button
                       onClick={toggleAlerts}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-black transition-all duration-200 ${
+                      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-black transition-all duration-200 ${
                         alertsEnabled
-                          ? "bg-white text-emerald-700 shadow-lg shadow-emerald-900/20"
-                          : "bg-white/15 text-white ring-1 ring-white/25 hover:bg-white/25 backdrop-blur-sm"
+                          ? "bg-white text-emerald-800 shadow-lg shadow-black/20"
+                          : "bg-white/12 text-white ring-1 ring-white/20 hover:bg-white/20 backdrop-blur-sm"
                       }`}
                     >
-                      {alertsEnabled ? "✓ Alerts On" : "🔔 Enable price alerts"}
+                      {alertsEnabled ? (content?.mandiUi?.alertsOn ?? "✓ Alerts On") : (content?.mandiUi?.enableAlerts ?? "🔔 Enable price alerts")}
                     </button>
                     <button
                       onClick={() => toggleWatchlist(searchCrop)}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-black transition-all duration-200 ${
+                      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-black transition-all duration-200 ${
                         watchlist.includes(searchCrop)
-                          ? "bg-white text-emerald-700 shadow-lg shadow-emerald-900/20"
-                          : "bg-white/15 text-white ring-1 ring-white/25 hover:bg-white/25 backdrop-blur-sm"
+                          ? "bg-white text-emerald-800 shadow-lg shadow-black/20"
+                          : "bg-white/12 text-white ring-1 ring-white/20 hover:bg-white/20 backdrop-blur-sm"
                       }`}
                     >
-                      {watchlist.includes(searchCrop) ? "★ Watching" : "☆ Watch crop"}
+                      {watchlist.includes(searchCrop) ? (content?.mandiUi?.watching ?? "★ Watching") : (content?.mandiUi?.watchCrop ?? "☆ Watch crop")}
                     </button>
                   </div>
+
                 </div>
               </motion.div>
             ) : null}
@@ -599,7 +654,7 @@ export default function MandiMitraPage() {
                 <div className="mt-5 flex items-baseline gap-3">
                   <span className="font-display text-4xl font-black tracking-tight text-[#032115] md:text-5xl">₹{currentPrice || "—"}</span>
                   <div className="rounded-xl bg-slate-100 px-3 py-1.5">
-                    <span className="text-xs font-black text-slate-600">per quintal</span>
+                    <span className="text-xs font-black text-slate-600">{content?.mandiUi?.perQuintalLabel ?? "per quintal"}</span>
                   </div>
                 </div>
               </div>
@@ -656,17 +711,21 @@ export default function MandiMitraPage() {
 
             <div className="flex flex-wrap items-center gap-2.5 rounded-3xl border border-slate-200/80 bg-white p-4 shadow-card md:p-5">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-3.5 py-2 text-[11px] font-black uppercase tracking-wider text-white shadow-sm shadow-emerald-200/60">
-                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" /> Live data
+                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" /> {content?.mandiUi?.liveData ?? "Live data"}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 px-3.5 py-2 text-[11px] font-black uppercase tracking-wider text-amber-800 ring-1 ring-amber-200/60">
-                <ShieldCheck size={13} className="text-amber-600" /> Govt-backed signals
+                <ShieldCheck size={13} className="text-amber-600" /> {content?.mandiUi?.govtBacked ?? "Govt-backed signals"}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-50 to-indigo-50 px-3.5 py-2 text-[11px] font-black uppercase tracking-wider text-sky-800 ring-1 ring-sky-200/60">
-                <Zap size={13} className="text-sky-600" fill="currentColor" /> AI summary ready
+                <Zap size={13} className="text-sky-600" fill="currentColor" /> {content?.mandiUi?.aiSummary ?? "AI summary ready"}
               </span>
               <span className="ml-auto inline-flex items-center gap-1.5 text-xs font-bold text-slate-500">
                 <MapPin size={13} className="text-slate-400" />
-                {locationStatus === "ready" ? `Live location • ${district}, ${state}` : locationStatus === "fallback" ? `Default location • ${district}, ${state}` : `Detecting location…`}
+                {locationStatus === "ready"
+                  ? (formatCopy(content?.mandiUi?.liveLocation, { district, state }) || `Live location • ${district}, ${state}`)
+                  : locationStatus === "fallback"
+                  ? (formatCopy(content?.mandiUi?.defaultLocation, { district, state }) || `Default location • ${district}, ${state}`)
+                  : (content?.mandiUi?.detectingLocation ?? "Detecting location…")}
               </span>
             </div>
 
@@ -693,7 +752,7 @@ export default function MandiMitraPage() {
                     {formatCopy(content?.mandiUi?.fetchingOfficial, { crop: searchCrop }) ||
                       `Fetching official prices for ${searchCrop}...`}
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-slate-500">This may take a few moments</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-500">{content?.mandiUi?.fetchingMoment ?? "This may take a few moments"}</p>
                 </div>
               ) : mandiData.length > 0 ? (
                 mandiData.map((item, i) => (
@@ -714,11 +773,11 @@ export default function MandiMitraPage() {
                         <div className="flex items-center gap-2">
                           {item.isLiveGovtData ? (
                             <span className="inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 px-3 py-1.5 text-[11px] font-black text-emerald-700 ring-1 ring-emerald-200/60">
-                              <ShieldCheck size={13} className="text-emerald-600" /> Verified
+                              <ShieldCheck size={13} className="text-emerald-600" /> {content?.mandiUi?.verified ?? "Verified"}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-1.5 text-[11px] font-black text-amber-700 ring-1 ring-amber-200/60">
-                              <AlertCircle size={13} className="text-amber-600" /> Estimate
+                              <AlertCircle size={13} className="text-amber-600" /> {content?.mandiUi?.estimate ?? "Estimate"}
                             </span>
                           )}
                         </div>
@@ -726,19 +785,19 @@ export default function MandiMitraPage() {
 
                       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
                         <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-3 ring-1 ring-slate-100">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Price</p>
+                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{content?.mandiUi?.priceLabel ?? "Price"}</p>
                           <p className="mt-1 font-display text-lg font-extrabold text-[#032115]">{item.price}</p>
-                          <p className="text-[10px] font-bold text-slate-500">per quintal</p>
+                          <p className="text-[10px] font-bold text-slate-500">{content?.mandiUi?.perQuintalLabel ?? "per quintal"}</p>
                         </div>
                         <div className="rounded-2xl p-3 ring-1 ring-slate-100" style={{ backgroundColor: item.type === "up" ? "rgba(16, 185, 129, 0.06)" : "rgba(244, 63, 94, 0.06)" }}>
-                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Trend</p>
+                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{content?.mandiUi?.trend ?? "Trend"}</p>
                           <p className={`mt-1 inline-flex items-center gap-0.5 font-display text-lg font-extrabold ${item.type === "up" ? "text-emerald-600" : "text-rose-600"}`}>
                             {item.type === "up" ? <ArrowUpRight size={16} strokeWidth={2.5} /> : <ArrowDownRight size={16} strokeWidth={2.5} />}
                             {item.trend}
                           </p>
                         </div>
                         <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-white p-3 ring-1 ring-sky-100/60">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Distance</p>
+                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{content?.mandiUi?.distance ?? "Distance"}</p>
                           <p className="mt-1 font-display text-base font-extrabold text-slate-700">{item.distance}</p>
                         </div>
                         <div className="flex items-center justify-end">
@@ -747,7 +806,7 @@ export default function MandiMitraPage() {
                               ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-200/60"
                               : "bg-gradient-to-r from-slate-100 to-slate-50 text-slate-600 ring-1 ring-slate-200"
                           }`}>
-                            {item.tagKey === "sellNow" ? "🚜 SELL NOW" : "⏳ WAIT"}
+                            {item.tagKey === "sellNow" ? (content?.mandiUi?.sellNow ?? "🚜 SELL NOW") : (content?.mandiUi?.wait ?? "⏳ WAIT")}
                           </span>
                         </div>
                       </div>
@@ -760,7 +819,7 @@ export default function MandiMitraPage() {
                           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 transition group-hover/btn:bg-emerald-500">
                             <Phone size={14} className="text-slate-600 transition group-hover/btn:text-white" />
                           </div>
-                          Contact agent
+                          {content?.mandiUi?.contactAgent ?? "Contact agent"}
                         </button>
                         <button
                           onClick={() => toggleWatchlist(item.name || searchCrop)}
@@ -770,7 +829,7 @@ export default function MandiMitraPage() {
                               : "border border-slate-200 bg-white text-slate-700 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-800"
                           }`}
                         >
-                          {watchlist.includes(item.name || searchCrop) ? "★ Watching" : "☆ Watch market"}
+                          {watchlist.includes(item.name || searchCrop) ? (content?.mandiUi?.watchingMarket ?? "★ Watching") : (content?.mandiUi?.watchMarket ?? "☆ Watch market")}
                         </button>
                       </div>
                     </div>
